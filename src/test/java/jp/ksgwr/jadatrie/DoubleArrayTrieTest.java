@@ -53,6 +53,7 @@ public class DoubleArrayTrieTest {
 		// TODO: codeLengthのfor文は重いので可能なかぎり統合する
 				// canDelete, canReplaceあたりは統合できる
 
+		assertThat(jadatrie.exactSpellerMatch("bed").ids, hasItems(6));
 		assertThat(jadatrie.exactSpellerMatch("bcd").ids, hasItems(6));
 		assertThat(jadatrie.exactSpellerMatch("bce").ids, hasItems(6));
 
