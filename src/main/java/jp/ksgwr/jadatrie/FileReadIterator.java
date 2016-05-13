@@ -42,7 +42,11 @@ public abstract class FileReadIterator<T> implements Iterator<Entry<String,T>> {
 				throw new RuntimeException(e);
 			}
 		}
-		return readString(line);
+		KeyValue<T> entry = readString(line);
+		while (entry == null && this.hasNext()) {
+			entry = (KeyValue<T>) this.next();
+		}
+		return entry;
 	}
 
 	public abstract KeyValue<T> readString(String line);
@@ -50,6 +54,15 @@ public abstract class FileReadIterator<T> implements Iterator<Entry<String,T>> {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
+	}
+
+	public int readRestLines() {
+		int count = 0;
+		while (this.hasNext()) {
+			this.next();
+			count++;
+		}
+		return count;
 	}
 
 }

@@ -1,5 +1,13 @@
 package jp.ksgwr.jadatrie;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -61,6 +69,14 @@ public class DoubleArrayTrie<T> {
 
     public DoubleArrayTrie(Class<T> target) {
     	this.target = target;
+    }
+
+    public int getDoubleArraySize() {
+    	return units.length;
+    }
+
+    public int getKeySize() {
+    	return keys.length;
     }
 
     public void build(TreeMap<String, T> entries) {
@@ -169,7 +185,11 @@ public class DoubleArrayTrie<T> {
 
     	// List<Node>を範囲(潜在ノード数)でソートすると効率が良い
     	// 文字列長にも影響するので完璧ではない
-    	this.units = new Unit[codeLength * size];
+		int unitSize = codeLength * size;
+		if (unitSize < 0) {
+			unitSize = size;
+		}
+    	this.units = new Unit[unitSize];
     	units[0] = new Unit(1, 0);
 
     	this.currentPos = 0;
@@ -222,12 +242,25 @@ public class DoubleArrayTrie<T> {
     	}
     }
 
+    protected void resize(int newSize) {
+    	System.out.println("resize:"+newSize);
+    	Unit[] newUnits = new Unit[newSize];
+    	System.arraycopy(units, 0, newUnits, 0, units.length);
+    	this.units = newUnits;
+    }
+
     private int insert(List<Node> siblings, int depth) {
+    	int maxCode = 0;
+    	for (Node node:siblings) {
+    		if (maxCode < node.code) {
+    			maxCode = node.code;
+    		}
+    	}
     	loop: while(true) {
     		currentPos++;
-    		/*if (units[begin] != null) {
-    			continue loop;
-    		}*/
+    		if (units.length <= currentPos + maxCode) {
+    			resize(units.length + currentPos + maxCode + keys.length - siblings.get(siblings.size() - 1).right);
+    		}
     		for (Node node:siblings) {
     			Unit unit = units[currentPos + node.code];
     			if (unit != null && unit.check != 0) {
@@ -632,5 +665,84 @@ public class DoubleArrayTrie<T> {
     		sb.append((char)codeMap[c]);
     	}
     	traveseNodeResult(sb, nodePos, codeMap);
+    }
+
+    public void save(File file) throws IOException {
+    	DataOutputStream out = null;
+		try {
+			out = new DataOutputStream(new BufferedOutputStream(
+					new FileOutputStream(file)));
+			out.writeInt(units.length);
+			// TODO: 末尾の未使用領域を削除すると後の効率的に良い
+			for(Unit unit:units) {
+				boolean isNotNull = unit != null;
+				out.writeBoolean(isNotNull);
+				if (isNotNull) {
+					out.writeInt(unit.base);
+					out.writeInt(unit.check);
+				}
+			}
+			out.writeInt(codes.length);
+			out.writeInt(codeLength);
+			for(int i=0;i<codes.length;i++) {
+				int code = codes[i];
+				if (code > 0) {
+					out.writeInt(i);
+					out.writeInt(code);
+				}
+			}
+		} finally {
+			if (out != null)
+				out.close();
+		}
+    }
+
+    public void load(File file) throws IOException {
+    	DataInputStream is = null;
+		try {
+			is = new DataInputStream(new BufferedInputStream(
+					new FileInputStream(file)));
+
+			int len = is.readInt();
+			this.units = new Unit[len];
+			for (int i=0;i<len;i++) {
+				boolean b = is.readBoolean();
+				if (b) {
+					int base = is.readInt();
+					int check = is.readInt();
+					this.units[i] = new Unit(base, check);
+				}
+			}
+			len = is.readInt();
+			this.codes = new int[len];
+			this.codeLength = is.readInt();
+			len = this.codeLength - 1;
+			for (int i=0;i<len;i++) {
+				int idx = is.readInt();
+				int code = is.readInt();
+				this.codes[idx] = code;
+			}
+		} finally {
+			if (is != null)
+				is.close();
+		}
+    }
+
+    @SuppressWarnings("unchecked")
+	public void setKeyValue(Iterator<Entry<String,T>> entries, int size) {
+    	this.keys = new String[size];
+    	this.vals = (T[]) Array.newInstance(target, size);
+    	int i = 0;
+    	while(entries.hasNext()) {
+    		Entry<String,T> entry = entries.next();
+    		this.keys[i] = entry.getKey();
+    		this.vals[i] = entry.getValue();
+    		i++;
+    	}
+    }
+
+    public void setKeyValue(String[] keys, T[] vals) {
+    	this.keys = keys;
+    	this.vals = vals;
     }
 }

@@ -3,6 +3,8 @@ package jp.ksgwr.jadatrie;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import org.junit.Before;
@@ -78,4 +80,14 @@ public class DoubleArrayTrieTest {
 		assertThat(jadatrie.walkNode("a"), is(1));
 	}
 
+	@Test
+	public void fileTest() throws IOException {
+		File file = new File("target", "test.idx");
+		jadatrie.save(file);
+		jadatrie.load(file);
+
+		SearchResult actual = jadatrie.commonPrefixSearch("abc");
+
+		assertThat(actual.ids, hasItems(1, 2));
+	}
 }
