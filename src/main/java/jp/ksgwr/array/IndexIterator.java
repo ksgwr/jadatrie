@@ -25,7 +25,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 		this.size = index.getSize();
 		this.splitSize = index.getSplitSize();
 
-		if (splitSize == 0) {
+		if (splitSize == Integer.MAX_VALUE) {
 			this.vals = vals;
 		}
 	}
@@ -38,7 +38,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	@Override
 	public T next() {
 		int tmpi;
-		if (splitSize == 0) {
+		if (splitSize == Integer.MAX_VALUE) {
 			tmpi = i;
 		} else {
 			tmpi = i % splitSize;
@@ -73,7 +73,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	@Override
 	public T previous() {
 		int tmpi;
-		if (splitSize == 0) {
+		if (splitSize == Integer.MAX_VALUE) {
 			tmpi = i;
 		} else {
 			tmpi = i % splitSize;

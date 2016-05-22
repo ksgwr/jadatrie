@@ -50,7 +50,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	private int searchRelativeIndex(int relativePosition, int absolutePosition) {
 		if (relativePosition < 0) {
-			for (valIndex--; valIndex > 0; valIndex--) {
+			for (valIndex--; valIndex >= 0; valIndex--) {
 				this.val = vals.get(valIndex);
 				this.offset -= val.length;
 				relativePosition = absolutePosition - offset;
@@ -138,6 +138,10 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 		this.size = size;
 	}
 
+	/**
+	 * compressすることでT[] valのみ使いMTセーフになる
+	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public void compress() {
 		int lastIndex = vals.size() - 1;
@@ -159,15 +163,33 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 				lastVal = vals.get(lastIndex);
 				this.lastOffset -= lastVal.length;
 				this.allocateSize -= delVal.length;
-				if (this.val == delVal) {
-					this.val = lastVal;
-					this.offset = this.lastOffset;
-					this.valIndex = lastIndex;
-				}
 			} else {
 				break;
 			}
 		}
+
+		if (vals.size() > 1 || this.allocateSize != this.size) {
+			T[] newVal = (T[]) Array.newInstance(target, size);
+			int offset = 0;
+			for (int i=0,valsSize=vals.size();i<valsSize;i++) {
+				T[] v = vals.get(i);
+				if (i == valsSize - 1) {
+					System.arraycopy(val, 0, newVal, offset, size - offset);
+				} else {
+					System.arraycopy(val, 0, newVal, offset, v.length);
+					offset += v.length;
+				}
+			}
+			this.val = newVal;
+			this.vals.clear();
+			this.vals.add(newVal);
+			this.allocateSize = size;
+		} else {
+			this.val = lastVal;
+		}
+		this.offset = 0;
+		this.lastOffset = 0;
+		this.valIndex = 0;
 	}
 
 	@Override
@@ -226,7 +248,9 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 			this.lastOffset += lastVal.length;
 		} else {
 			T[] lastVal = vals.get(vals.size() - 1);
-			lastVal[size++] = e;
+			int lastIndex = size - lastOffset;
+			size++;
+			lastVal[lastIndex] = e;
 		}
 		return true;
 	}

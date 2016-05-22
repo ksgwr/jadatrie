@@ -41,9 +41,11 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		this.cacheOffset = -1;
 		this.offset = 0;
 		this.size = size;
+		this.splitSize = Integer.MAX_VALUE;
 		this.index = new Index<T>(directory);
 		this.vals = (T[]) Array.newInstance(target, size);
 		directory.mkdirs();
+		index.cleanupSegment();
 		index.setSize(size);
 		index.setSplitSize(splitSize);
 		index.saveInfo();
@@ -59,13 +61,14 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		this.splitSize = splitSize;
 		this.index = new Index<T>(directory);
 		directory.mkdirs();
+		index.cleanupSegment();
 		index.setSize(size);
 		index.setSplitSize(splitSize);
 		index.saveInfo();
-		this.offset = ( size / splitSize ) * splitSize;
+		this.offset = ( ( size - 1 ) / splitSize ) * splitSize;
 		this.vals = (T[]) Array.newInstance(target, size - offset);
 		index.saveSegment(offset, target, vals, size - offset);
-		for (int seg = size / splitSize; seg > 0; seg--) {
+		for (int seg = (size - 1) / splitSize; seg > 0; seg--) {
 			this.offset -= splitSize;
 			this.vals = (T[]) Array.newInstance(target, splitSize);
 			index.saveSegment(offset, target, this.vals, splitSize);
@@ -154,7 +157,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public Iterator<T> iterator() {
-		if (splitSize > 0) {
+		if (splitSize != Integer.MAX_VALUE) {
 			try {
 				saveIfUpdated();
 			} catch (IOException e) {
@@ -187,7 +190,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	public void resize(int size) {
 		try {
 			int valSize = size % splitSize;
-			int offset = (size / splitSize) * splitSize;
+			int offset = ( (size - 1) / splitSize) * splitSize;
 			T[] newVal;
 			T[] oldVal;
 			if (this.size < size) {
@@ -207,8 +210,9 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 					valSize = splitSize;
 				}
+				valSize = splitSize == Integer.MAX_VALUE ? size : splitSize;
 				oldVal = getSegment(offset);
-				newVal = (T[]) Array.newInstance(target, splitSize);
+				newVal = (T[]) Array.newInstance(target, valSize);
 				System.arraycopy(oldVal, 0, newVal, 0, oldVal.length);
 				index.saveSegment(offset, target, newVal, newVal.length);
 				updateCache(offset, newVal);
@@ -234,6 +238,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 					offset += splitSize;
 				}
 			}
+			this.index.setSize(size);
 			this.size = size;
 			saveInfo();
 		} catch (IOException e) {
@@ -246,12 +251,12 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	@Override
 	public void compress() {
 		try {
-			int lastOffset = (size / splitSize) * splitSize;
+			int lastOffset = ((size - 1) / splitSize) * splitSize;
 			T[] lastVal = getSegment(lastOffset);
 			int i = size - 1;
 			while (i >= 0) {
 				int valIndex = i - lastOffset;
-				while(valIndex > 0 && lastVal[valIndex] == null) {
+				while(valIndex >= 0 && lastVal[valIndex] == null) {
 					valIndex--;
 					size--;
 					i--;
@@ -272,6 +277,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 					break;
 				}
 			}
+			this.index.setSize(size);
 			saveInfo();
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
@@ -318,39 +324,55 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	@Override
 	public boolean add(T t) {
 		try {
-			int lastOffset = (size / splitSize) * splitSize;
-			int valSize = (size + 1) % splitSize;
-			T[] newVal;
-			size++;
-			if (valSize == 0) {
-				// 新領域の拡大
-				newVal = (T[]) Array.newInstance(target, splitSize);
-				newVal[0] = t;
+			if (splitSize == Integer.MAX_VALUE) {
+				if (vals.length == size) {
+					T[] newVal = (T[]) Array.newInstance(target, vals.length + vals.length);
+					System.arraycopy(vals, 0, newVal, 0, vals.length);
+					vals = newVal;
+				}
+				vals[size] = t;
+				size++;
 
-				lastOffset += splitSize;
-
-				saveInfo();
-			} else {
-				newVal = getSegment(lastOffset);
-				newVal[valSize] = t;
-
-				// 効率性のためsaveInfoしない
 				isUpdatedInfo = true;
+			} else {
+				int lastOffset = ((size - 1) / splitSize) * splitSize;
+				int valSize = size % splitSize;
+				T[] newVal;
+				size++;
+				if (valSize == 0) {
+					// 新領域の拡大
+					newVal = (T[]) Array.newInstance(target, splitSize);
+					newVal[0] = t;
+
+					lastOffset += splitSize;
+
+					saveInfo();
+					index.saveSegment(lastOffset, target, newVal, size - lastOffset);
+				} else {
+					newVal = getSegment(lastOffset);
+					newVal[valSize] = t;
+
+					// 効率性のためsaveInfoしない
+					isUpdatedInfo = true;
+				}
+
+				if (lastOffset != this.offset) {
+					// cacheにヒットしない場合
+					saveIfUpdated();
+					this.cacheOffset = this.offset;
+					this.cacheVals = this.vals;
+
+					this.offset = lastOffset;
+					this.vals = newVal;
+				}
 			}
-			saveIfUpdated();
-			this.cacheOffset = this.offset;
-			this.cacheVals = this.vals;
-
-			this.offset = lastOffset;
-			this.vals = newVal;
-
+			this.index.setSize(size);
 			isUpdated = true;
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-
 		return true;
 	}
 

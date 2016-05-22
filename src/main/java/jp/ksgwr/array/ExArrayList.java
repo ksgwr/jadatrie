@@ -24,7 +24,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	abstract public void load(File directory) throws IOException, ClassNotFoundException;
 
 	public void save(File directory) throws IOException, ClassNotFoundException {
-		save(directory, 0);
+		save(directory, Integer.MAX_VALUE);
 	}
 
 	public void save(File directory, int splitSize) throws IOException, ClassNotFoundException {

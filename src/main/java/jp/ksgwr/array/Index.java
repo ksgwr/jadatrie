@@ -79,8 +79,7 @@ public class Index<T extends Serializable> {
 		return prefix;
 	}
 
-	public void save() throws IOException {
-		saveInfo();
+	public void cleanupSegment() throws IOException {
 		for(File file:directory.listFiles(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
@@ -89,6 +88,11 @@ public class Index<T extends Serializable> {
 		})) {
 			file.delete();
 		}
+	}
+
+	public void save() throws IOException {
+		saveInfo();
+		cleanupSegment();
 		int i = 0;
 		ObjectOutputStream oos = null;
 		try {
@@ -167,7 +171,7 @@ public class Index<T extends Serializable> {
 					new FileInputStream(new File(directory, segPrefix + offset))));
 
 			int valSize;
-			if (splitSize == 0) {
+			if (splitSize == Integer.MAX_VALUE) {
 				valSize = size;
 			} else if (offset + splitSize < size) {
 				valSize = splitSize;
