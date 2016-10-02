@@ -443,14 +443,22 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public ListIterator<T> listIterator() {
-		// TODO 自動生成されたメソッド・スタブ
-		return null;
+		try {
+			this.saveIfUpdated();
+			return new IndexIterator<T>(target, index, vals);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
 	public ListIterator<T> listIterator(int index) {
-		// TODO 自動生成されたメソッド・スタブ
-		return null;
+		try {
+			this.saveIfUpdated();
+			return new IndexIterator<T>(target, this.index, vals, index);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override

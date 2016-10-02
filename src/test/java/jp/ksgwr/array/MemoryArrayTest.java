@@ -3,6 +3,7 @@ package jp.ksgwr.array;
 import static org.junit.Assert.*;
 
 import java.util.Iterator;
+import java.util.ListIterator;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -47,6 +48,16 @@ public class MemoryArrayTest {
 		while (ite.hasNext()) {
 			Integer actual = ite.next();
 			assertEquals(new Integer(i++), actual);
+		}
+	}
+
+	@Test
+	public void listIteratorTest() {
+		int i = 11;
+		ListIterator<Integer> ite = ary.listIterator(i);
+		while (ite.hasPrevious()) {
+			Integer actual = ite.previous();
+			assertEquals(new Integer(i--), actual);
 		}
 	}
 

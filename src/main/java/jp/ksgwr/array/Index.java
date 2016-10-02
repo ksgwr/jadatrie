@@ -15,38 +15,75 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Iterator;
 
+/**
+ * index directory
+ * info file include indexSize and splitSize.
+ * seg file include item value.
+ * This class implemented by Java standard object serialize stream.
+ * it can implemented by other method (e.g. MessagePack)
+ *
+ * @author ksgwr
+ *
+ * @param <T> item class
+ */
 public class Index<T extends Serializable> {
 
+	/** info file name */
 	private static final String INFO_FILENAME = "info";
 
+	/** seg prefix file name */
 	private static final String SEG_PREFIX = "seg";
 
+	/** index directory */
 	private final File directory;
 
+	/** common prefix */
 	private final String prefix;
 
+	/** info file name */
 	private final String infoFilename;
 
+	/** seg file prefix name */
 	private final String segPrefix;
 
+	/** split size */
 	private int splitSize;
 
+	/** index size */
 	private int size;
 
-	private Iterator<T> iterator;
-
+	/**
+	 * constructor
+	 * @param directory index directory
+	 */
 	public Index(File directory) {
 		this(directory, "");
 	}
 
+	/**
+	 * constructor
+	 * @param directory index directory
+	 * @param prefix common prefix file name
+	 */
 	public Index(File directory, String prefix) {
 		this(directory, prefix, 0);
 	}
 
+	/**
+	 * constructor
+	 * @param directory index directory
+	 * @param splitSize split size
+	 */
 	public Index(File directory, int splitSize) {
 		this(directory, "", splitSize);
 	}
 
+	/**
+	 * constructor
+	 * @param directory index directory
+	 * @param prefix common prefix file name
+	 * @param splitSize split size
+	 */
 	public Index(File directory, String prefix, int splitSize) {
 		this.directory = directory;
 		this.prefix = prefix;
@@ -55,30 +92,50 @@ public class Index<T extends Serializable> {
 		this.segPrefix = prefix + SEG_PREFIX;
 	}
 
+	/**
+	 * set index size
+	 * @param size index size
+	 */
 	public void setSize(int size) {
 		this.size = size;
 	}
 
-	public void setIterator(Iterator<T> iterator) {
-		this.iterator = iterator;
-	}
-
+	/**
+	 * set split size
+	 * @param splitSize
+	 */
 	public void setSplitSize(int splitSize) {
 		this.splitSize = splitSize;
 	}
 
+	/**
+	 * get size
+	 * @return index size
+	 */
 	public int getSize() {
 		return size;
 	}
 
+	/**
+	 * get split size
+	 * @return split size
+	 */
 	public int getSplitSize() {
 		return splitSize;
 	}
 
+	/**
+	 * get common prefix
+	 * @return common prefix
+	 */
 	public String getPrefix() {
 		return prefix;
 	}
 
+	/**
+	 * delete all segment file.
+	 * @throws IOException
+	 */
 	public void cleanupSegment() throws IOException {
 		for(File file:directory.listFiles(new FilenameFilter() {
 			@Override
@@ -90,7 +147,12 @@ public class Index<T extends Serializable> {
 		}
 	}
 
-	public void save() throws IOException {
+	/**
+	 * save all data
+	 * @param iterator data iterator
+	 * @throws IOException file error
+	 */
+	public void save(Iterator<T> iterator) throws IOException {
 		saveInfo();
 		cleanupSegment();
 		int i = 0;
@@ -118,6 +180,10 @@ public class Index<T extends Serializable> {
 		}
 	}
 
+	/**
+	 * save info file
+	 * @throws IOException file error
+	 */
 	public void saveInfo() throws IOException {
 		DataOutputStream out = null;
 		try {
@@ -132,6 +198,14 @@ public class Index<T extends Serializable> {
 		}
 	}
 
+	/**
+	 * save segment
+	 * @param offset file offset
+	 * @param target target class
+	 * @param vals segment values
+	 * @param size size
+	 * @throws IOException file error
+	 */
 	public void saveSegment(int offset, Class<T> target, T[] vals, int size) throws IOException {
 		ObjectOutputStream oos = null;
 		try {
@@ -148,6 +222,10 @@ public class Index<T extends Serializable> {
 
 	}
 
+	/**
+	 * load info and set size and splitSize.
+	 * @throws IOException file error
+	 */
 	public void loadInfo() throws IOException {
 		DataInputStream is = null;
 		try {
@@ -162,6 +240,14 @@ public class Index<T extends Serializable> {
 		}
 	}
 
+	/**
+	 * load segment
+	 * @param offset file offset
+	 * @param target target class
+	 * @return segment values
+	 * @throws IOException file error
+	 * @throws ClassNotFoundException target class error
+	 */
 	@SuppressWarnings("unchecked")
 	public T[] loadSegment(int offset, Class<T> target) throws IOException, ClassNotFoundException {
 		T[] vals = null;
@@ -172,6 +258,7 @@ public class Index<T extends Serializable> {
 
 			int valSize;
 			if (splitSize == Integer.MAX_VALUE) {
+				// not split, allocate minimum size
 				valSize = size;
 			} else if (offset + splitSize < size) {
 				valSize = splitSize;
@@ -193,10 +280,20 @@ public class Index<T extends Serializable> {
 		return vals;
 	}
 
+	/**
+	 * check segment file
+	 * @param offset offset
+	 * @return if true exist file
+	 */
 	public boolean isExistSegment(int offset) {
 		return new File(directory, segPrefix + offset).exists();
 	}
 
+	/**
+	 * delete segment file
+	 * @param offset offset
+	 * @return if true delete file
+	 */
 	public boolean deleteSegment(int offset) {
 		return new File(directory, segPrefix + offset).delete();
 	}
