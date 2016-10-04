@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -29,11 +30,6 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	private boolean isUpdated;
 
 	private boolean isUpdatedInfo;
-
-	public DiskArrayList(Class<T> target) {
-		super(target);
-		doOnExit();
-	}
 
 	@SuppressWarnings("unchecked")
 	public DiskArrayList(Class<T> target, File directory, int size) throws IOException {
@@ -83,6 +79,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				try {
 					saveIfUpdated();
 					if (isUpdatedInfo) {
+						index.setSize(size);
 						index.saveInfo();
 					}
 				} catch (IOException e) {
@@ -93,6 +90,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	public void saveInfo() throws IOException {
+		index.setSize(size);
 		index.saveInfo();
 		isUpdatedInfo = false;
 	}
@@ -101,6 +99,16 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		if (isUpdated) {
 			index.saveSegment(offset, target, vals, vals.length);
 			isUpdated = false;
+		}
+	}
+
+	private final void initForAllScan() {
+		if (splitSize != Integer.MAX_VALUE) {
+			try {
+				saveIfUpdated();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 
@@ -157,13 +165,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public Iterator<T> iterator() {
-		if (splitSize != Integer.MAX_VALUE) {
-			try {
-				saveIfUpdated();
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
+		initForAllScan();
 		return new IndexIterator<T>(target, index, vals);
 	}
 
@@ -411,10 +413,32 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		return false;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void clear() {
-		// TODO 自動生成されたメソッド・スタブ
+		this.cacheOffset = -1;
+		this.cacheVals = null;
+		this.isUpdated = true;
+		this.isUpdatedInfo = true;
 
+		if (splitSize == Integer.MAX_VALUE) {
+			this.offset = 0;
+			Arrays.fill(vals, null);
+		} else {
+			try {
+				index.cleanupSegment();
+				this.offset = ( ( size - 1 ) / splitSize ) * splitSize;
+				this.vals = (T[]) Array.newInstance(target, size - offset);
+				index.saveSegment(offset, target, vals, size - offset);
+				for (int seg = (size - 1) / splitSize; seg > 0; seg--) {
+					this.offset -= splitSize;
+					this.vals = (T[]) Array.newInstance(target, splitSize);
+					index.saveSegment(offset, target, this.vals, splitSize);
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
 	}
 
 	@Override
@@ -431,40 +455,32 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public int indexOf(Object o) {
-		// TODO 自動生成されたメソッド・スタブ
-		return 0;
+		initForAllScan();
+		return super.indexOf(o);
 	}
 
 	@Override
 	public int lastIndexOf(Object o) {
-		// TODO 自動生成されたメソッド・スタブ
-		return 0;
+		initForAllScan();
+		return super.lastIndexOf(o);
 	}
 
 	@Override
 	public ListIterator<T> listIterator() {
-		try {
-			this.saveIfUpdated();
-			return new IndexIterator<T>(target, index, vals);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		initForAllScan();
+		return new IndexIterator<T>(target, index, vals);
 	}
 
 	@Override
 	public ListIterator<T> listIterator(int index) {
-		try {
-			this.saveIfUpdated();
-			return new IndexIterator<T>(target, this.index, vals, index);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		initForAllScan();
+		return new IndexIterator<T>(target, this.index, vals, index);
 	}
 
 	@Override
 	public List<T> subList(int fromIndex, int toIndex) {
-		// TODO 自動生成されたメソッド・スタブ
-		return null;
+		initForAllScan();
+		return super.subList(fromIndex, toIndex);
 	}
 
 }

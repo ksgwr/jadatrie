@@ -3,15 +3,16 @@ package jp.ksgwr.array;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 /**
  * Extra Array List
  * this list is constant capacity size.
+ * it expects to call "get" and "set" than "add", so it can access null items.
  * it implemented by distributed internal array.
- * it can allocate internal array efficient and write external file partially.
+ * it can allocate internal array efficiently and write external file partially.
  *
  * @author ksgwr
  *
@@ -89,14 +90,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 
 	@Override
 	public boolean contains(Object o) {
-		Iterator<T> ite = this.iterator();
-		while (ite.hasNext()) {
-			T t = ite.next();
-			if (t == o) {
-				return true;
-			}
-		}
-		return false;
+		return indexOf(o) >= 0;
 	}
 
 	@Override
@@ -107,6 +101,51 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 			}
 		}
 		return true;
+	}
+
+	@Override
+	public int indexOf(Object o) {
+		if (o == null) {
+			for (int i = 0, size = size(); i < size; i++) {
+				if (get(i) == null) {
+					return i;
+				}
+			}
+		} else {
+			for (int i = 0, size = size(); i < size; i++) {
+				if (o.equals(get(i))) {
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	@Override
+	public int lastIndexOf(Object o) {
+		if (o == null) {
+			for (int i = size() - 1; i >= 0; i--) {
+				if (get(i) == null) {
+					return i;
+				}
+			}
+		} else {
+			for (int i = size() - 1; i >= 0; i--) {
+				if (o.equals(get(i))) {
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	@Override
+	public List<T> subList(int fromIndex, int toIndex) {
+		List<T> subList = new ArrayList<T>(toIndex - fromIndex);
+		for (int i = fromIndex; i <= toIndex; i++) {
+			subList.add(this.get(i));
+		}
+		return subList;
 	}
 
 	@SuppressWarnings({ "hiding", "unchecked" })

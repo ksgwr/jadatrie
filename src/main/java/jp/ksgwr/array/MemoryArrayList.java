@@ -5,26 +5,39 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.ListIterator;
 
-
+/**
+ * Memory Array List
+ *
+ * @author ksgwr
+ *
+ * @param <T> item class
+ */
 public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
+	/** array list */
 	private ArrayList<T[]> vals;
 
+	/** array index */
 	private int valIndex;
 
+	/** offset index */
 	private int offset;
 
+	/** data size */
 	private int size;
 
+	/** capacity size */
 	private int allocateSize;
 
+	/** last value offset (for efficiency "add" ) */
 	private int lastOffset;
 
+	/** current value */
 	private T[] val;
 
 	public MemoryArrayList(Class<T> target) {
@@ -133,7 +146,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 					this.valIndex = lastIndex;
 				}
 			}
-			// size縮小の場合は縮小領域は初期化しない
+			// size縮小の場合は縮小領域は初期化しない (領域が消える訳でなく意味が薄いため)
 		}
 		this.size = size;
 	}
@@ -244,7 +257,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 			val[0] = e;
 			this.vals.add(val);
 			size++;
-			this.allocateSize += lastVal.length;
+			this.allocateSize += val.length;
 			this.lastOffset += lastVal.length;
 		} else {
 			T[] lastVal = vals.get(vals.size() - 1);
@@ -325,14 +338,56 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public void clear() {
-		// TODO 自動生成されたメソッド・スタブ
-
+		this.val = vals.get(0);
+		if (vals.size() > 1) {
+			this.vals.clear();
+			this.vals.add(val);
+		}
+		this.allocateSize = val.length;
+		this.size = val.length;
+		this.offset = 0;
+		this.lastOffset = 0;
+		Arrays.fill(val, null);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void add(int index, T element) {
-		// TODO 自動生成されたメソッド・スタブ
+		int lastValIndex = vals.size() - 1;
+		T[] lastVal = vals.get(valIndex);
+		T[] val;
+		if (this.size == this.allocateSize) {
+			// 最後の配列と同じサイズだけ拡張する
+			val = (T[]) Array.newInstance(target, lastVal.length);
+			this.vals.add(val);
+			this.allocateSize += val.length;
+			this.lastOffset += lastVal.length;
+			lastVal = val;
+			lastValIndex++;
+		}
 
+		if(index == size) {
+			lastVal[index - lastOffset] = element;
+		} else if (index < 0 && size < index) {
+			throw new ArrayIndexOutOfBoundsException(index);
+		} else {
+			int tmpi = index - lastOffset;
+			while(0 <= lastValIndex) {
+				if (tmpi < 0) {
+					val = lastVal;
+					System.arraycopy(val, 0, val, 1, val.length - 1);
+					lastVal = vals.get(--lastValIndex);
+					val[0] = lastVal[lastVal.length - 1];
+					tmpi += lastVal.length;
+				} else {
+					System.arraycopy(lastVal, tmpi, lastVal, tmpi + 1,
+							lastVal.length - tmpi - 1);
+					lastVal[tmpi] = element;
+					break;
+				}
+			}
+		}
+		this.size++;
 	}
 
 	@Override
@@ -342,33 +397,16 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	@Override
-	public int indexOf(Object o) {
-		// TODO 自動生成されたメソッド・スタブ
-		return 0;
-	}
-
-	@Override
-	public int lastIndexOf(Object o) {
-		// TODO 自動生成されたメソッド・スタブ
-		return 0;
-	}
-
-	@Override
 	public ListIterator<T> listIterator() {
 		return new ListArrayIterator<T>(vals, size);
 	}
 
 	@Override
 	public ListIterator<T> listIterator(int index) {
-		// TODO 自動生成されたメソッド・スタブ
-		return null;
+		return new ListArrayIterator<T>(vals, size, index);
 	}
 
-	@Override
-	public List<T> subList(int fromIndex, int toIndex) {
-		// TODO 自動生成されたメソッド・スタブ
-		return null;
-	}
+
 
 
 }

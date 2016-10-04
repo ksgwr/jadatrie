@@ -3,6 +3,7 @@ package jp.ksgwr.array;
 import static org.junit.Assert.*;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 
 import org.junit.Before;
@@ -109,5 +110,50 @@ public class MemoryArrayTest {
 		for (Integer i = 0; i < ary.size(); i++) {
 			assertEquals(i, ary.get(i));
 		}
+	}
+
+	@Test
+	public void addIndexTest() {
+		int oldSize = ary.size();
+		Integer newVal = -1;
+
+		ary.add(1, newVal);
+
+		assertEquals(oldSize + 1, ary.size());
+		assertEquals(newVal, ary.get(1));
+		for (Integer i = 2; i < ary.size(); i++) {
+			assertEquals(new Integer(i - 1), ary.get(i));
+		}
+	}
+
+	@Test
+	public void clearTest() {
+		int size = ary.size();
+		ary.clear();
+		assertEquals(size, ary.size());
+		assertNull(ary.get(0));
+		Integer newVal = 1;
+		ary.set(1, newVal);
+		assertEquals(newVal, ary.get(1));
+	}
+
+	@Test
+	public void indexOfTest() {
+		assertEquals(2, ary.indexOf(2));
+	}
+
+	@Test
+	public void lastIndexOfTest() {
+		assertEquals(2, ary.lastIndexOf(2));
+	}
+
+	@Test
+	public void subListTest() {
+		List<Integer> subList = ary.subList(9, 11);
+
+		assertEquals(3, subList.size());
+		assertEquals(new Integer(9), subList.get(0));
+		assertEquals(new Integer(10), subList.get(1));
+		assertEquals(new Integer(11), subList.get(2));
 	}
 }
