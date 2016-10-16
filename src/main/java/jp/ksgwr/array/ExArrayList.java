@@ -87,7 +87,27 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	public boolean isEmpty() {
 		return size() == 0;
 	}
-
+	
+	@Override
+    public boolean remove(Object o) {
+        if (o == null) {
+            for (int i = 0, size = size(); i < size; i++) {
+                if (get(i) == null) {
+                	// remove
+                    return true;
+                }
+            }
+        } else {
+        	for (int i = 0, size = size(); i < size; i++) {
+                if (o.equals(get(i))) {
+                	// remove
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+	
 	@Override
 	public boolean contains(Object o) {
 		return indexOf(o) >= 0;

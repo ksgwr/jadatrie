@@ -45,7 +45,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		index.setSize(size);
 		index.setSplitSize(splitSize);
 		index.saveInfo();
-		index.saveSegment(offset, target, vals, size);
+		index.saveSegment(offset, target, vals);
 		doOnExit();
 	}
 
@@ -62,12 +62,11 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		index.setSplitSize(splitSize);
 		index.saveInfo();
 		this.offset = ( ( size - 1 ) / splitSize ) * splitSize;
-		this.vals = (T[]) Array.newInstance(target, size - offset);
-		index.saveSegment(offset, target, vals, size - offset);
+		this.vals = (T[]) Array.newInstance(target, splitSize);
+		index.saveSegment(offset, target, vals);
 		for (int seg = (size - 1) / splitSize; seg > 0; seg--) {
 			this.offset -= splitSize;
-			this.vals = (T[]) Array.newInstance(target, splitSize);
-			index.saveSegment(offset, target, this.vals, splitSize);
+			index.saveSegment(offset, target, this.vals);
 		}
 		doOnExit();
 	}
@@ -97,7 +96,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	public void saveIfUpdated() throws IOException {
 		if (isUpdated) {
-			index.saveSegment(offset, target, vals, vals.length);
+			index.saveSegment(offset, target, vals);
 			isUpdated = false;
 		}
 	}
@@ -191,7 +190,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	@Override
 	public void resize(int size) {
 		try {
-			int valSize = size % splitSize;
+			int valSize;
 			int offset = ( (size - 1) / splitSize) * splitSize;
 			T[] newVal;
 			T[] oldVal;
@@ -199,14 +198,14 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				// 領域拡大
 				if (!index.isExistSegment(offset)) {
 					// 末尾
-					newVal = (T[]) Array.newInstance(target, valSize);
-					index.saveSegment(offset, target, newVal, newVal.length);
+					newVal = (T[]) Array.newInstance(target, splitSize);
+					index.saveSegment(offset, target, newVal);
 
 					// 中間ファイル
 					offset -= splitSize;
 					while (!index.isExistSegment(offset)) {
 						newVal = (T[]) Array.newInstance(target, splitSize);
-						index.saveSegment(offset, target, newVal, newVal.length);
+						index.saveSegment(offset, target, newVal);
 						offset -= splitSize;
 					}
 
@@ -216,14 +215,15 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				oldVal = getSegment(offset);
 				newVal = (T[]) Array.newInstance(target, valSize);
 				System.arraycopy(oldVal, 0, newVal, 0, oldVal.length);
-				index.saveSegment(offset, target, newVal, newVal.length);
+				index.saveSegment(offset, target, newVal);
 				updateCache(offset, newVal);
 			} else {
 				// 領域縮小
 				oldVal = getSegment(offset);
+				valSize = splitSize == Integer.MAX_VALUE ? size : splitSize;
 				newVal = (T[]) Array.newInstance(target, valSize);
 				System.arraycopy(oldVal, 0, newVal, 0, newVal.length);
-				index.saveSegment(offset, target, newVal, newVal.length);
+				index.saveSegment(offset, target, newVal);
 				updateCache(offset, newVal);
 				if (offset < this.offset) {
 					this.offset = offset;
@@ -334,8 +334,6 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				}
 				vals[size] = t;
 				size++;
-
-				isUpdatedInfo = true;
 			} else {
 				int lastOffset = ((size - 1) / splitSize) * splitSize;
 				int valSize = size % splitSize;
@@ -347,15 +345,11 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 					newVal[0] = t;
 
 					lastOffset += splitSize;
-
-					saveInfo();
-					index.saveSegment(lastOffset, target, newVal, size - lastOffset);
+					
+					index.saveSegment(lastOffset, target, newVal);
 				} else {
 					newVal = getSegment(lastOffset);
 					newVal[valSize] = t;
-
-					// 効率性のためsaveInfoしない
-					isUpdatedInfo = true;
 				}
 
 				if (lastOffset != this.offset) {
@@ -369,6 +363,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				}
 			}
 			this.index.setSize(size);
+			isUpdatedInfo = true;
 			isUpdated = true;
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
@@ -376,12 +371,6 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			throw new RuntimeException(e);
 		}
 		return true;
-	}
-
-	@Override
-	public boolean remove(Object o) {
-		// TODO 自動生成されたメソッド・スタブ
-		return false;
 	}
 
 	@Override
@@ -428,12 +417,11 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			try {
 				index.cleanupSegment();
 				this.offset = ( ( size - 1 ) / splitSize ) * splitSize;
-				this.vals = (T[]) Array.newInstance(target, size - offset);
-				index.saveSegment(offset, target, vals, size - offset);
+				this.vals = (T[]) Array.newInstance(target, splitSize);
+				index.saveSegment(offset, target, vals);
 				for (int seg = (size - 1) / splitSize; seg > 0; seg--) {
 					this.offset -= splitSize;
-					this.vals = (T[]) Array.newInstance(target, splitSize);
-					index.saveSegment(offset, target, this.vals, splitSize);
+					index.saveSegment(offset, target, this.vals);
 				}
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -441,16 +429,128 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public void add(int index, T element) {
-		// TODO 自動生成されたメソッド・スタブ
+	public void add(int i, T element) {
+		if (i == size) {
+			add(element);
+		} else if(i < 0 && size < i) {
+			throw new ArrayIndexOutOfBoundsException(i);
+		} else {
+			try {
+				if (splitSize == Integer.MAX_VALUE) {
+					T[] newVal;
+					if (size == vals.length) {
+						newVal = (T[]) Array.newInstance(target, vals.length + vals.length);
+						System.arraycopy(vals, 0, newVal, 0, i);
+					} else {
+						newVal = this.vals;
+					}
+					// TODO: 未使用領域のコピーは省略可すれば効率化できる
+					System.arraycopy(vals, i, newVal, i + 1, vals.length - i);
+					newVal[i] = element;
+					vals = newVal;
+
+				} else {
+					this.saveIfUpdated();
+					// TODO: tmpでなくcacheとして更新した方が効率が良い？
+					// cacheの中身も変更を反映させる必要があり、 cacheが使いまわせない
+					int tmpOffset = ( (size - 1) / splitSize ) * splitSize;
+					T[] tmpVal = null;
+					int offset;
+					T[] val;
+					
+					// tmpi計算
+
+					if ( size % splitSize == 0) {
+						// size拡張判断
+						tmpOffset += splitSize;
+						tmpVal = (T[]) Array.newInstance(target, splitSize);
+						index.saveSegment(tmpOffset, target, tmpVal);
+					} else {
+						tmpVal = index.loadSegment(tmpOffset, target);
+					}
+					
+					int tmpi = i - tmpOffset;
+					while (tmpi < 0) {
+						offset = tmpOffset;
+						val = tmpVal;
+						System.arraycopy(val, 0, val, 1, val.length - 1);
+						tmpOffset -= splitSize;
+						tmpVal = index.loadSegment(tmpOffset, target);
+						val[0] = tmpVal[tmpVal.length - 1];
+						index.saveSegment(offset, target, val);
+						tmpi = i - tmpOffset;
+					}
+					System.arraycopy(tmpVal, tmpi, tmpVal, tmpi + 1, tmpVal.length - tmpi - 1);
+					tmpVal[tmpi] = element;
+					this.cacheOffset = -1;
+					this.cacheVals = null;
+					this.offset = tmpOffset;
+					this.vals = tmpVal;
+				}
+
+				this.index.setSize(++size);
+				isUpdatedInfo = true;
+				isUpdated = true;
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+
+		}
+
 
 	}
 
 	@Override
-	public T remove(int index) {
-		// TODO 自動生成されたメソッド・スタブ
-		return null;
+	public T remove(int i) {
+		T ret = null;
+		if(i < 0 && size <= i) {
+			throw new ArrayIndexOutOfBoundsException(i);
+		} else if (splitSize == Integer.MAX_VALUE){
+			ret = vals[i];
+			System.arraycopy(vals, i + 1, vals, i, vals.length - i - 1);
+		} else {
+			try {
+				this.saveIfUpdated();
+				int tmpOffset = ( (size - 1) / splitSize ) * splitSize;
+				T[] tmpVal = index.loadSegment(tmpOffset, target);
+				int tmpi = i - tmpOffset;
+				T tmpItem = null;
+				int lastIndex;
+				while (tmpi < 0) {
+					// TODO: tmpVal.length - 1は一定値でsplitSizeに置換できる
+					lastIndex = tmpVal.length - 1;
+					T firstItem = tmpVal[0];
+					System.arraycopy(tmpVal, 1, tmpVal, 0, lastIndex);
+					tmpVal[lastIndex] = tmpItem;
+					tmpItem = firstItem;
+					index.saveSegment(tmpOffset, target, tmpVal);
+					tmpOffset -= splitSize;
+					tmpVal = index.loadSegment(tmpOffset, target);
+					tmpi += tmpVal.length;
+				}
+				ret = tmpVal[tmpi];
+				System.arraycopy(tmpVal, tmpi + 1, tmpVal, tmpi, tmpVal.length - tmpi - 1);
+				tmpVal[tmpVal.length - 1] = tmpItem;
+				this.cacheOffset = -1;
+				this.cacheVals = null;
+				this.offset = tmpOffset;
+				this.vals = tmpVal;
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+			
+		}
+		this.index.setSize(--size);
+		this.isUpdatedInfo = true;
+		this.isUpdated = true;
+		return ret;
 	}
 
 	@Override

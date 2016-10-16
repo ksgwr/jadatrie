@@ -125,6 +125,19 @@ public class MemoryArrayTest {
 			assertEquals(new Integer(i - 1), ary.get(i));
 		}
 	}
+	
+	@Test
+	public void removeIndexTest() {
+		int oldSize = ary.size();
+		
+		Integer removeVal = ary.remove(1);
+		
+		assertEquals(oldSize - 1, ary.size());
+		assertEquals(new Integer(1), removeVal);
+		for (Integer i = 1; i < ary.size(); i++) {
+			assertEquals(new Integer(i + 1), ary.get(i));
+		}
+	}
 
 	@Test
 	public void clearTest() {

@@ -173,6 +173,12 @@ public class Index<T extends Serializable> {
 				oos.writeObject(val);
 				i++;
 			}
+			int j;
+			if (splitSize != Integer.MAX_VALUE && (j = size % splitSize) != 0) {
+				for (; j < splitSize; j++) {
+					oos.writeObject(null);
+				}
+			}
 		} finally {
 			if (oos != null) {
 				oos.close();
@@ -203,15 +209,14 @@ public class Index<T extends Serializable> {
 	 * @param offset file offset
 	 * @param target target class
 	 * @param vals segment values
-	 * @param size size
 	 * @throws IOException file error
 	 */
-	public void saveSegment(int offset, Class<T> target, T[] vals, int size) throws IOException {
+	public void saveSegment(int offset, Class<T> target, T[] vals) throws IOException {
 		ObjectOutputStream oos = null;
 		try {
 			oos = new ObjectOutputStream(new BufferedOutputStream(
 					new FileOutputStream(new File(directory, segPrefix + offset))));
-			for (int i = 0; i < size; i++) {
+			for (int i = 0; i < vals.length; i++) {
 				oos.writeObject(vals[i]);
 			}
 		} finally {
@@ -260,11 +265,10 @@ public class Index<T extends Serializable> {
 			if (splitSize == Integer.MAX_VALUE) {
 				// not split, allocate minimum size
 				valSize = size;
-			} else if (offset + splitSize < size) {
-				valSize = splitSize;
 			} else {
-				valSize = size - offset;
+				valSize = splitSize;
 			}
+			
 			vals = (T[]) Array.newInstance(target, valSize);
 
 			for (int i=0;i<valSize;i++) {
