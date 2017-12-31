@@ -345,7 +345,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 					newVal[0] = t;
 
 					lastOffset += splitSize;
-					
+
 					index.saveSegment(lastOffset, target, newVal);
 				} else {
 					newVal = getSegment(lastOffset);
@@ -387,7 +387,12 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public boolean addAll(T[] val) {
-		return true;
+		return false;
+	}
+
+	@Override
+	public boolean addAll(int index, T[] val) {
+		return false;
 	}
 
 	@Override
@@ -459,7 +464,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 					T[] tmpVal = null;
 					int offset;
 					T[] val;
-					
+
 					// tmpi計算
 
 					if ( size % splitSize == 0) {
@@ -470,7 +475,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 					} else {
 						tmpVal = index.loadSegment(tmpOffset, target);
 					}
-					
+
 					int tmpi = i - tmpOffset;
 					while (tmpi < 0) {
 						offset = tmpOffset;
@@ -545,7 +550,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			}
-			
+
 		}
 		this.index.setSize(--size);
 		this.isUpdatedInfo = true;

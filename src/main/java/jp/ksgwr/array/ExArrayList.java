@@ -51,6 +51,14 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	abstract public boolean addAll(T[] val);
 
 	/**
+	 * add all item array
+	 * @param index index
+	 * @param val item array
+	 * @return if true success.
+	 */
+	abstract public boolean addAll(int indedx, T[] val);
+
+	/**
 	 * load external index
 	 * @param directory index directory
 	 * @throws IOException file error
@@ -87,7 +95,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	public boolean isEmpty() {
 		return size() == 0;
 	}
-	
+
 	@Override
     public boolean remove(Object o) {
         if (o == null) {
@@ -107,7 +115,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
         }
         return false;
     }
-	
+
 	@Override
 	public boolean contains(Object o) {
 		return indexOf(o) >= 0;

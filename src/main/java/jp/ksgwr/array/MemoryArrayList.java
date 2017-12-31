@@ -20,91 +20,77 @@ import java.util.ListIterator;
 public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	/** array list */
-	private ArrayList<T[]> vals;
-
-	/** array index */
-	private int valIndex;
-
-	/** offset index */
-	private int offset;
+	protected ArrayList<T[]> vals;
 
 	/** data size */
-	private int size;
+	protected int size;
 
 	/** capacity size */
-	private int allocateSize;
+	protected int allocateSize;
 
 	/** last value offset (for efficiency "add" ) */
-	private int lastOffset;
+	protected int lastOffset;
 
-	/** current value */
-	private T[] val;
-
-	public MemoryArrayList(Class<T> target) {
+	/**
+	 * constructor
+	 * @param target target class
+	 */
+	protected MemoryArrayList(Class<T> target) {
 		super(target);
 	}
 
+	/**
+	 * constructor
+	 * @param target target class
+	 * @param size initial array size
+	 */
 	public MemoryArrayList(Class<T> target, int size) {
 		this(target, size, 10);
 	}
 
+	/**
+	 * constructor
+	 * @param target target class
+	 * @param size initial array size
+	 * @param resizeCapacity resize capacity size
+	 */
 	@SuppressWarnings("unchecked")
 	public MemoryArrayList(Class<T> target, int size, int resizeCapacity) {
 		super(target);
-		this.offset = 0;
-		this.valIndex = 0;
 		this.size = size;
 		this.allocateSize = size;
 		this.lastOffset = 0;
-		this.val = (T[]) Array.newInstance(target, size);
+		T[] val = (T[]) Array.newInstance(target, size);
 		this.vals = new ArrayList<T[]>(resizeCapacity);
-		vals.add(this.val);
-	}
-
-	private int searchRelativeIndex(int relativePosition, int absolutePosition) {
-		if (relativePosition < 0) {
-			for (valIndex--; valIndex >= 0; valIndex--) {
-				this.val = vals.get(valIndex);
-				this.offset -= val.length;
-				relativePosition = absolutePosition - offset;
-				if (relativePosition < val.length) {
-					break;
-				}
-			}
-		} else {
-			for (valIndex++; valIndex < vals.size(); valIndex++) {
-				this.offset += val.length;
-				this.val = vals.get(valIndex);
-				relativePosition = absolutePosition - offset;
-				if (relativePosition < val.length) {
-					break;
-				}
-			}
-		}
-		return relativePosition;
+		vals.add(val);
 	}
 
 	@Override
 	public T get(int i) {
-		int tmpi = i - offset;
-		try {
-			// TODO: 未使用領域にアクセスする可能性はある
-			return this.val[tmpi];
-		} catch (ArrayIndexOutOfBoundsException e) {
-			tmpi = searchRelativeIndex(tmpi, i);
-			return this.val[tmpi];
+		int tmpi = i;
+		for (T[] val: vals) {
+			int offset = tmpi - val.length;
+			if (offset < 0) {
+				return val[tmpi];
+			} else {
+				tmpi = offset;
+			}
 		}
+		throw new ArrayIndexOutOfBoundsException();
 	}
 
 	@Override
 	public T set(int i, T t) {
-		int tmpi = i - offset;
-		try {
-			return this.val[tmpi] = t;
-		} catch (ArrayIndexOutOfBoundsException e) {
-			tmpi = searchRelativeIndex(tmpi, i);
-			return this.val[tmpi] = t;
+		int tmpi = i;
+		for (T[] val: vals) {
+			int offset = tmpi - val.length;
+			if (offset < 0) {
+				return val[tmpi] = t;
+			} else {
+				tmpi = offset;
+			}
 		}
+		throw new ArrayIndexOutOfBoundsException();
 	}
 
 	@Override
@@ -140,11 +126,6 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 				T[] lastVal = vals.get(lastIndex);
 				this.lastOffset -= lastVal.length;
 				this.allocateSize -=  delVal.length;
-				if (this.val == delVal) {
-					this.val = lastVal;
-					this.offset = this.lastOffset;
-					this.valIndex = lastIndex;
-				}
 			}
 			// size縮小の場合は縮小領域は初期化しない (領域が消える訳でなく意味が薄いため)
 		}
@@ -157,6 +138,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void compress() {
+		// 後ろからnull値が続くまでsize,lastOffset,allocateSizeを計算する
 		int lastIndex = vals.size() - 1;
 		T[] lastVal = vals.get(lastIndex);
 		while (lastIndex >= 0) {
@@ -182,27 +164,24 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 		}
 
 		if (vals.size() > 1 || this.allocateSize != this.size) {
+			// valsが複数あれば統合する
 			T[] newVal = (T[]) Array.newInstance(target, size);
 			int offset = 0;
-			for (int i=0,valsSize=vals.size();i<valsSize;i++) {
+			for (int i = 0, valsSize = vals.size(); i < valsSize; i++) {
 				T[] v = vals.get(i);
 				if (i == valsSize - 1) {
-					System.arraycopy(val, 0, newVal, offset, size - offset);
+					System.arraycopy(v, 0, newVal, offset, size - offset);
 				} else {
-					System.arraycopy(val, 0, newVal, offset, v.length);
+					System.arraycopy(v, 0, newVal, offset, v.length);
 					offset += v.length;
 				}
 			}
-			this.val = newVal;
 			this.vals.clear();
 			this.vals.add(newVal);
 			this.allocateSize = size;
-		} else {
-			this.val = lastVal;
 		}
-		this.offset = 0;
+
 		this.lastOffset = 0;
-		this.valIndex = 0;
 	}
 
 	@Override
@@ -216,13 +195,13 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 		Index<T> index = new Index<T>(directory);
 		index.loadInfo();
 
-		this.val = (T[]) Array.newInstance(target, index.getSize());
+		// copy all values
+		T[] val = (T[]) Array.newInstance(target, index.getSize());
 		IndexIterator<T> iterator = new IndexIterator<T>(target, index, val);
 		while(iterator.hasNext()) {
 			val[iterator.index()] = iterator.next();
 		}
-		this.valIndex = 0;
-		this.offset = 0;
+
 		this.size = val.length;
 		this.allocateSize = val.length;
 		this.lastOffset = 0;
@@ -270,27 +249,16 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public boolean addAll(Collection<? extends T> c) {
-		T[] val = c.toArray(this.val);
+		@SuppressWarnings("unchecked")
+		T[] val = c.toArray((T[]) Array.newInstance(target, 0));
 		return addAll(val);
 	}
 
 	@Override
 	public boolean addAll(int index, Collection<? extends T> c) {
-		T[] val = c.toArray(this.val);
-		int tmpi;
-		do {
-			tmpi = index - this.lastOffset;
-		} while (tmpi >= 0);
-		
-		//境界条件、そのまま追加か分割が発生するか
-		if (tmpi == 0) {
-			// 違う?
-		} else {
-			
-		}
-		
-		this.size += this.val.length;
-		return true;
+		@SuppressWarnings("unchecked")
+		T[] val = c.toArray((T[]) Array.newInstance(target, 0));
+		return addAll(index, val);
 	}
 
 
@@ -317,8 +285,52 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 				copySize = val.length;
 			}
 			System.arraycopy(val, 0, lastVal, size - lastOffset, copySize);
-			this.size += this.val.length;
+			this.size += val.length;
 		}
+		return true;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public boolean addAll(int index, T[] val) {
+		int tmpValIndex = vals.size() - 1;
+		T[] tmpVal = vals.get(tmpValIndex);
+
+		if (index == size) {
+			this.addAll(val);
+		} else if (index < 0 && size < index) {
+			throw new ArrayIndexOutOfBoundsException(index);
+		} else {
+			int tmpi = index -lastOffset;
+			while (0 <= tmpValIndex) {
+				if (tmpi < 0) {
+					tmpi += tmpVal.length;
+					tmpVal = vals.get(--tmpValIndex);
+				} else if (tmpi == 0) {
+					this.vals.add(tmpValIndex, val);
+					break;
+				} else {
+					// split array
+					int postLen = tmpVal.length - tmpi;
+					T[] preVal = (T[]) Array.newInstance(target, tmpi);
+					T[] postVal = (T[]) Array.newInstance(target, postLen);
+
+					System.arraycopy(tmpVal, 0, preVal, 0, tmpi);
+					System.arraycopy(tmpVal, tmpi, postVal, 0, postLen);
+
+					vals.remove(tmpValIndex);
+					vals.add(tmpValIndex, postVal);
+					vals.add(tmpValIndex, val);
+					vals.add(tmpValIndex, preVal);
+
+					break;
+				}
+			}
+			this.size += val.length;
+			this.allocateSize += val.length;
+			this.lastOffset += val.length;
+		}
+
 		return true;
 	}
 
@@ -336,14 +348,13 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public void clear() {
-		this.val = vals.get(0);
+		T[] val = vals.get(0);
 		if (vals.size() > 1) {
 			this.vals.clear();
 			this.vals.add(val);
 		}
 		this.allocateSize = val.length;
 		this.size = val.length;
-		this.offset = 0;
 		this.lastOffset = 0;
 		Arrays.fill(val, null);
 	}
@@ -352,7 +363,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	@Override
 	public void add(int index, T element) {
 		int tmpValIndex = vals.size() - 1;
-		T[] tmpVal = vals.get(valIndex);
+		T[] tmpVal = vals.get(tmpValIndex);
 		T[] val;
 		if (this.size == this.allocateSize) {
 			// 最後の配列と同じサイズだけ拡張する
@@ -391,7 +402,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	@Override
 	public T remove(int index) {
 		int tmpValIndex = vals.size() - 1;
-		T[] tmpVal = vals.get(valIndex);
+		T[] tmpVal = vals.get(tmpValIndex);
 		T tmpItem = null;
 		T ret = null;
 		if (index < 0 && size <= index) {

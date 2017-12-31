@@ -2,6 +2,7 @@ package jp.ksgwr.array;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -12,6 +13,7 @@ import org.junit.Test;
 /**
  * cache機構をそれぞれ持っているのでMTSafeではない
  * MTセーフ対応版を作るなら常に全部読み込むのではなく、何番目を読み込むなどの実装が必要そう
+ * => compressで組み直せばMTセーフになるので問題にはなりにくい(CachedMemoryArrayListに実装を移した)
  *
  * @author ksgwr
  *
@@ -125,13 +127,71 @@ public class MemoryArrayTest {
 			assertEquals(new Integer(i - 1), ary.get(i));
 		}
 	}
-	
+
+	@Test
+	public void addAllTest() {
+		List<Integer> newVals = Arrays.asList(new Integer[]{20, 21, 22, 23, 24});
+
+		ary.addAll(newVals);
+
+		assertEquals(25, ary.size());
+		for (Integer i = 0; i < ary.size(); i++) {
+			assertEquals(i, ary.get(i));
+		}
+	}
+
+	@Test
+	public void addAll2Test() {
+		Integer[] newVals = new Integer[]{21, 22, 23, 24};
+
+		ary.add(20);
+		ary.addAll(newVals);
+
+		assertEquals(25, ary.size());
+		for (Integer i = 0; i < 25; i++) {
+			assertEquals(i, ary.get(i));
+		}
+	}
+
+	@Test
+	public void addAllIndexTest() {
+		List<Integer> newVals = Arrays.asList(new Integer[]{-1, -2, -3, -4, -5});
+
+		ary.addAll(0, newVals);
+
+		assertEquals(25, ary.size());
+		for (Integer i = 0; i < 5; i++) {
+			assertEquals(new Integer(-1 * (i + 1)), ary.get(i));
+		}
+		for (Integer i = 5; i < ary.size(); i++) {
+			assertEquals(new Integer(i - 5), ary.get(i));
+		}
+	}
+
+	@Test
+	public void addAllIndex2Test() {
+		Integer[] newVals = new Integer[]{-5, -6, -7, -8, -9};
+
+		ary.addAll(5, newVals);
+
+		assertEquals(25, ary.size());
+		for (Integer i = 0; i < 5; i++) {
+			assertEquals(i, ary.get(i));
+		}
+		for (Integer i = 5; i < 10; i++) {
+			assertEquals(new Integer(-1 * i), ary.get(i));
+		}
+		for (Integer i = 10; i < ary.size(); i++) {
+			assertEquals(new Integer(i - 5), ary.get(i));
+		}
+	}
+
 	@Test
 	public void removeIndexTest() {
 		int oldSize = ary.size();
-		
+
 		Integer removeVal = ary.remove(1);
-		
+
 		assertEquals(oldSize - 1, ary.size());
 		assertEquals(new Integer(1), removeVal);
 		for (Integer i = 1; i < ary.size(); i++) {
