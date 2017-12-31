@@ -1,6 +1,5 @@
 package jp.ksgwr.array;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
@@ -195,12 +194,9 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void load(File directory) throws IOException, ClassNotFoundException {
-		Index<T> index = new Index<T>(directory);
-		index.loadInfo();
-
+	public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException {
 		// copy all values
-		T[] val = (T[]) Array.newInstance(target, index.getSize());
+		T[] val = (T[]) Array.newInstance(target, index.getItemSize());
 		IndexIterator<T> iterator = new IndexIterator<T>(target, index, val);
 		while(iterator.hasNext()) {
 			val[iterator.index()] = iterator.next();

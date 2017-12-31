@@ -268,7 +268,7 @@ public class Index<T extends Serializable> {
 			} else {
 				valSize = splitSize;
 			}
-			
+
 			vals = (T[]) Array.newInstance(target, valSize);
 
 			for (int i=0;i<valSize;i++) {

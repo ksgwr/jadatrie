@@ -1,6 +1,5 @@
 package jp.ksgwr.array;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -126,8 +125,8 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	}
 
 	@Override
-	public void load(File directory) throws IOException, ClassNotFoundException {
-		super.load(directory);
+	public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException {
+		super.load(index);
 		this.initCache();
 	}
 

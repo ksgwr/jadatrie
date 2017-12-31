@@ -1,6 +1,5 @@
 package jp.ksgwr.array;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
@@ -12,7 +11,7 @@ import java.util.ListIterator;
 
 public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
-	private Index<T> index;
+	private SeparatableIndex<T> index;
 
 	private T[] vals;
 
@@ -23,86 +22,52 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	private int offset;
 
-	private int splitSize;
+	private int segmentNum;
 
 	private int size;
+
+	private int segmentSize;
 
 	private boolean isUpdated;
 
 	private boolean isUpdatedInfo;
 
 	@SuppressWarnings("unchecked")
-	public DiskArrayList(Class<T> target, File directory, int size) throws IOException {
+	public DiskArrayList(Class<T> target, SeparatableIndex<T> index, int size) throws IOException {
 		super(target);
 		this.cacheOffset = -1;
 		this.offset = 0;
+		this.segmentNum = 0;
+		this.segmentSize = 1;
 		this.size = size;
-		this.splitSize = Integer.MAX_VALUE;
-		this.index = new Index<T>(directory);
+		this.index = index;
 		this.vals = (T[]) Array.newInstance(target, size);
-		directory.mkdirs();
-		index.cleanupSegment();
-		index.setSize(size);
-		index.setSplitSize(splitSize);
-		index.saveInfo();
-		index.saveSegment(offset, target, vals);
-		doOnExit();
+		index.cleanup();
+		index.updateItemSize(size);
 	}
 
-	@SuppressWarnings("unchecked")
-	public DiskArrayList(Class<T> target, File directory, int size, int splitSize) throws IOException {
-		super(target);
-		this.cacheOffset = -1;
-		this.size = size;
-		this.splitSize = splitSize;
-		this.index = new Index<T>(directory);
-		directory.mkdirs();
-		index.cleanupSegment();
-		index.setSize(size);
-		index.setSplitSize(splitSize);
-		index.saveInfo();
-		this.offset = ( ( size - 1 ) / splitSize ) * splitSize;
-		this.vals = (T[]) Array.newInstance(target, splitSize);
-		index.saveSegment(offset, target, vals);
-		for (int seg = (size - 1) / splitSize; seg > 0; seg--) {
-			this.offset -= splitSize;
-			index.saveSegment(offset, target, this.vals);
+	@Override
+	public void close() throws IOException {
+		saveIfUpdated();
+		if (isUpdatedInfo) {
+			index.updateItemSize(size);
 		}
-		doOnExit();
-	}
-
-	private void doOnExit() {
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				try {
-					saveIfUpdated();
-					if (isUpdatedInfo) {
-						index.setSize(size);
-						index.saveInfo();
-					}
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		});
 	}
 
 	public void saveInfo() throws IOException {
-		index.setSize(size);
-		index.saveInfo();
+		index.updateItemSize(size);
 		isUpdatedInfo = false;
 	}
 
 	public void saveIfUpdated() throws IOException {
 		if (isUpdated) {
-			index.saveSegment(offset, target, vals);
+			index.saveSegment(segmentNum, vals);
 			isUpdated = false;
 		}
 	}
 
 	private final void initForAllScan() {
-		if (splitSize != Integer.MAX_VALUE) {
+		if (this.segmentSize > 0) {
 			try {
 				saveIfUpdated();
 			} catch (IOException e) {
@@ -115,7 +80,8 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		try {
 			int tmpOffset = this.offset;
 			saveIfUpdated();
-			this.offset = (i / splitSize) * splitSize;
+			this.segmentNum = index.getSegmentNumber(i);
+			this.offset = index.getOffset(segmentNum);
 			if (this.offset == this.cacheOffset) {
 				// swap cache and current value
 				T[] tmpVals = this.cacheVals;
@@ -125,7 +91,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			} else {
 				this.cacheVals = this.vals;
 
-				this.vals = index.loadSegment(offset, target);
+				this.vals = index.loadSegment(segmentNum, target);
 			}
 			this.cacheOffset = tmpOffset;
 		} catch (ClassNotFoundException e1) {
@@ -191,22 +157,22 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	public void resize(int size) {
 		try {
 			int valSize;
-			int offset = ( (size - 1) / splitSize) * splitSize;
+			int segmentNum = index.getSegmentNumber(size);
 			T[] newVal;
 			T[] oldVal;
 			if (this.size < size) {
 				// 領域拡大
-				if (!index.isExistSegment(offset)) {
+				if (index.getSegmentSize() <= segmentNum) {
 					// 末尾
-					newVal = (T[]) Array.newInstance(target, splitSize);
-					index.saveSegment(offset, target, newVal);
+					newVal = (T[]) Array.newInstance(target, index.getItemPerSegmentSize(segmentNum));
+					index.saveSegment(segmentNum, newVal);
 
 					// 中間ファイル
-					offset -= splitSize;
-					while (!index.isExistSegment(offset)) {
-						newVal = (T[]) Array.newInstance(target, splitSize);
-						index.saveSegment(offset, target, newVal);
-						offset -= splitSize;
+					segmentNum--;
+					while (index.getSegmentSize() <= segmentNum) {
+						newVal = (T[]) Array.newInstance(target, index.getItemPerSegmentSize(segmentNum));
+						index.saveSegment(segmentNum, newVal);
+						segmentNum--;
 					}
 
 					valSize = splitSize;
@@ -295,8 +261,8 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	@Override
-	public void load(File directory) throws IOException {
-		this.index = new Index<T>(directory);
+	public void load(SeparatableIndex<T> index) throws IOException {
+		this.index = index;
 		index.loadInfo();
 
 		this.vals = null;

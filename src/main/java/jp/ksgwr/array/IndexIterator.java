@@ -14,7 +14,7 @@ import java.util.ListIterator;
 public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 
 	/** index instance */
-	private Index<T> index;
+	private SeparatableIndex<T> index;
 
 	/** target class */
 	private Class<T> target;
@@ -22,8 +22,11 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	/** current index offset */
 	private int i;
 
-	/** split size */
-	private int splitSize;
+	private int segmentNum;
+
+	private int segmentOffset;
+
+	private int nextSegmentOffset;
 
 	/** size */
 	private int size;
@@ -37,7 +40,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	 * @param index index
 	 * @param vals current vals, can set null (on memory).
 	 */
-	public IndexIterator(Class<T> target, Index<T> index, T[] vals) {
+	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T[] vals) {
 		this(target, index, vals, 0);
 	}
 
@@ -48,24 +51,15 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	 * @param vals current vals
 	 * @param i index
 	 */
-	public IndexIterator(Class<T> target, Index<T> index, T[] vals, int i) {
+	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T[] vals, int i) {
 		this.index = index;
 		this.target = target;
+		this.vals = vals;
 		this.i = i;
-		this.size = index.getSize();
-		this.splitSize = index.getSplitSize();
-
-		if (splitSize == Integer.MAX_VALUE) {
-			this.vals = vals;
-		} else {
-			try {
-				this.vals = index.loadSegment((i / splitSize) * splitSize, target);
-			} catch (ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
+		this.size = index.getItemSize();
+		this.segmentNum = index.getSegmentNumber(i);
+		this.segmentOffset = index.getOffset(segmentNum);
+		this.nextSegmentOffset = segmentOffset + index.getItemPerSegmentSize(segmentNum);
 	}
 
 	@Override
@@ -75,21 +69,18 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 
 	@Override
 	public T next() {
-		int tmpi;
-		if (splitSize == Integer.MAX_VALUE) {
-			tmpi = i;
-		} else {
-			tmpi = i % splitSize;
-			if (tmpi == 0) {
-				try {
-					this.vals = index.loadSegment(i, target);
-				} catch (ClassNotFoundException e) {
-					throw new RuntimeException(e);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
+		if (i == nextSegmentOffset) {
+			try {
+				this.vals = index.loadSegment(++segmentNum, target);
+				this.segmentOffset = this.nextSegmentOffset;
+				this.nextSegmentOffset += this.vals.length;
+			} catch (ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
 			}
 		}
+		int tmpi = i - segmentOffset;
 		i++;
 		return vals[tmpi];
 	}
@@ -114,26 +105,18 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 
 	@Override
 	public T previous() {
-		int tmpi;
-		if (splitSize == Integer.MAX_VALUE) {
-			tmpi = i;
-		} else {
-			tmpi = i % splitSize;
-			if (tmpi == 0) {
-				try {
-					T tmp = vals[tmpi];
-					if (i > 0) {
-						this.vals = index.loadSegment(i - splitSize, target);
-					}
-					i--;
-					return tmp;
-				} catch (ClassNotFoundException e) {
-					throw new RuntimeException(e);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
+		if (i < segmentOffset) {
+			try {
+				this.vals = index.loadSegment(--segmentNum, target);
+				this.nextSegmentOffset = this.segmentOffset;
+				this.segmentOffset -= this.vals.length;
+			} catch (ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
 			}
 		}
+		int tmpi = i - segmentOffset;
 		i--;
 		return vals[tmpi];
 	}

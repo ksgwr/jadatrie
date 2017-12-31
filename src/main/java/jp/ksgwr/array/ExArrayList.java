@@ -1,6 +1,5 @@
 package jp.ksgwr.array;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -60,35 +59,28 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 
 	/**
 	 * load external index
-	 * @param directory index directory
+	 * @param index index
 	 * @throws IOException file error
 	 * @throws ClassNotFoundException target class error
 	 */
-	abstract public void load(File directory) throws IOException, ClassNotFoundException;
-
-	/**
-	 * save index (1 info, 1 data file)
-	 * @param directory index directory
-	 * @throws IOException file error
-	 * @throws ClassNotFoundException target class error
-	 */
-	public void save(File directory) throws IOException, ClassNotFoundException {
-		save(directory, Integer.MAX_VALUE);
-	}
+	abstract public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException;
 
 	/**
 	 * save index
-	 * @param directory index directory
-	 * @param splitSize split item size
+	 * @param index index
 	 * @throws IOException file error
-	 * @throws ClassNotFoundException target class error
 	 */
-	public void save(File directory, int splitSize) throws IOException, ClassNotFoundException {
-		directory.mkdirs();
-		Index<T> index = new Index<T>(directory);
-		index.setSize(this.size());
-		index.setSplitSize(splitSize);
+	public void save(SeparatableIndex<T> index) throws IOException {
+		index.updateItemSize(this.size());
 		index.save(this.iterator());
+	}
+
+	/**
+	 * close index
+	 * @throws IOException file error
+	 */
+	public void close() throws IOException {
+
 	}
 
 	@Override
