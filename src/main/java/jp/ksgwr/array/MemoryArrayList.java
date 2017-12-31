@@ -98,6 +98,18 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 		return this.listIterator();
 	}
 
+	private void removeUnuseArray() {
+		// lastOffsetの更新,未使用リストの削除
+		while (size < lastOffset) {
+			int lastIndex = vals.size() - 1;
+			T[] delVal = vals.remove(lastIndex--);
+			T[] lastVal = vals.get(lastIndex);
+			this.lastOffset -= lastVal.length;
+			this.allocateSize -= delVal.length;
+		}
+		// size縮小の場合は縮小領域は初期化しない (領域が消える訳でなく意味が薄いため)
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void resize(int size) {
@@ -119,15 +131,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 			}
 		} else {
 			// 領域を縮小する場合
-			// lastOffsetの更新,未使用リストの削除
-			while (size < lastOffset) {
-				int lastIndex = vals.size() - 1;
-				T[] delVal = vals.remove(lastIndex--);
-				T[] lastVal = vals.get(lastIndex);
-				this.lastOffset -= lastVal.length;
-				this.allocateSize -=  delVal.length;
-			}
-			// size縮小の場合は縮小領域は初期化しない (領域が消える訳でなく意味が薄いため)
+			removeUnuseArray();
 		}
 		this.size = size;
 	}
@@ -336,15 +340,30 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public boolean removeAll(Collection<?> c) {
-		// TODO 自動生成されたメソッド・スタブ
-		return false;
+		return batchRemove(c, false);
 	}
 
 	@Override
 	public boolean retainAll(Collection<?> c) {
-		// TODO 自動生成されたメソッド・スタブ
-		return false;
+		return batchRemove(c, true);
 	}
+
+	private boolean batchRemove(Collection<?> c, boolean complement) {
+        int w = 0;
+        boolean modified = false;
+        for (int i = 0; i < size; i++) {
+        	T val = this.get(i);
+            if (c.contains(val) == complement) {
+            	this.set(w++, val);
+            }
+        }
+        if (w != size) {
+        	size = w;
+        	modified = true;
+        	removeUnuseArray();
+        }
+        return modified;
+    }
 
 	@Override
 	public void clear() {

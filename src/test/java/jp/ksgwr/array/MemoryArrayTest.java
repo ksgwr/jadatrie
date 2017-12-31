@@ -187,6 +187,34 @@ public class MemoryArrayTest {
 	}
 
 	@Test
+	public void removeAllTest() {
+		// remove 0,5,10,15
+		List<Integer> removeCol = Arrays.asList(new Integer[]{20, 15, 10, 5, 0});
+
+		ary.removeAll(removeCol);
+
+		assertEquals(16, ary.size());
+		for (Integer val = 0, i = 0; val < 20; val++) {
+			if (val % 5 != 0) {
+				assertEquals(val, ary.get(i++));
+			}
+		}
+	}
+
+	@Test
+	public void retainAllTest() {
+		List<Integer> retainCol = Arrays.asList(new Integer[]{0, 5, 10, 15, 20});
+
+		ary.add(20);
+		ary.retainAll(retainCol);
+
+		assertEquals(retainCol.size(), ary.size());
+		for (Integer i = 0; i < ary.size(); i++) {
+			assertEquals(retainCol.get(i), ary.get(i));
+		}
+	}
+
+	@Test
 	public void removeIndexTest() {
 		int oldSize = ary.size();
 
