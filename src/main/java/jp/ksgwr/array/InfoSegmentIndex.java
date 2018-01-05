@@ -3,10 +3,11 @@ package jp.ksgwr.array;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Iterator;
 
-public class InfoSegmentIndex<T, Serializer, Deserializer> implements SeparatableIndex<T> {
+public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> implements SeparatableIndex<T> {
 
 	/** info file name */
 	private static final String INFO_FILENAME = "info";
@@ -22,16 +23,16 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 
 	/** seg file prefix name */
 	protected final String segPrefix;
-	
+
 	/** index size */
 	protected int itemSize;
-	
+
 	/** segmentg size */
 	protected int segmentSize;
-	
+
 	/** indexer */
 	protected InfoSegmentIndexer<T, Serializer, Deserializer> indexer;
-	
+
 	public InfoSegmentIndex(File directory, String prefix, InfoSegmentIndexer<T, Serializer, Deserializer> indexer) throws IOException {
 		this.directory = directory;
 		this.infoFile = new File(directory, prefix + INFO_FILENAME);
@@ -39,19 +40,19 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 		this.segmentSize = 1;
 		this.indexer = indexer;
 	}
-	
+
 	protected File getSegmentFile(int segmentNum) {
 		return new File(directory, segPrefix);
 	}
-	
+
 	protected void loadInfo(InfoSegmentIndexer<T,Serializer,Deserializer> indexer, Deserializer deserializer) throws IOException {
 		this.itemSize = indexer.deserializeIntProp(deserializer);
 	}
-	
+
 	protected void saveInfo(InfoSegmentIndexer<T,Serializer,Deserializer> indexer, Serializer serializer) throws IOException {
 		indexer.serializeIntProp(serializer, this.itemSize);
 	}
-	
+
 	/**
 	 * load itemSize and segmentSize
 	 * @param infoFile
@@ -68,7 +69,7 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 			}
 		}
 	}
-	
+
 	@Override
 	public int getItemSize() {
 		return itemSize;
@@ -93,7 +94,7 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 	public int getItemPerSegmentSize(int segmentNum) {
 		return itemSize;
 	}
-	
+
 	@Override
 	public void updateItemSize(int size) throws IOException {
 		if (size == this.itemSize) {
@@ -111,7 +112,7 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 			}
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void save(Iterator<T> ite, int size, Class<T> target) throws IOException {
@@ -136,7 +137,7 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 					tmpi = 0;
 					File segmentFile = getSegmentFile(segmentNum);
 					serializer = indexer.openSerializer(segmentFile, true);
-					
+
 				}
 				vals[tmpi++] = ite.next();
 				i++;
@@ -157,7 +158,7 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 		if (!segmentFile.exists()) {
 			return vals;
 		}
-		
+
 		Deserializer deserializer = null;
 		try {
 			deserializer = indexer.openDeserializer(segmentFile, true);
@@ -167,10 +168,10 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 				indexer.closeDeserializer(deserializer);
 			}
 		}
-		
+
 		return vals;
 	}
-	
+
 	@Override
 	public void saveSegment(int segmentNum, T[] vals) throws IOException {
 		Serializer serializer = null;
@@ -183,7 +184,7 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 				indexer.closeSerializer(serializer);
 			}
 		}
-		
+
 	}
 
 	@Override
