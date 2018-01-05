@@ -71,8 +71,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	 * @throws IOException file error
 	 */
 	public void save(SeparatableIndex<T> index) throws IOException {
-		index.updateItemSize(this.size());
-		index.save(this.iterator());
+		index.save(this.iterator(), this.size(), target);
 	}
 
 	/**

@@ -197,7 +197,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException {
 		// copy all values
 		T[] val = (T[]) Array.newInstance(target, index.getItemSize());
-		IndexIterator<T> iterator = new IndexIterator<T>(target, index, val);
+		IndexIterator<T> iterator = new IndexIterator<T>(target, index);
 		while(iterator.hasNext()) {
 			val[iterator.index()] = iterator.next();
 		}

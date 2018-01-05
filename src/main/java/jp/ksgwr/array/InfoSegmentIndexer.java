@@ -18,7 +18,7 @@ public interface InfoSegmentIndexer<T, Serializer, Deserializer> {
 	public void serializeIntProp(Serializer serializer, int val) throws IOException;
 	
 	public void deserializeSegment(Deserializer deserializer, T[] val) throws IOException, ClassNotFoundException;
-
+	
 	public int deserializeIntProp(Deserializer deserializer) throws IOException;
 	
 }

@@ -96,6 +96,9 @@ public class InfoSegmentIndex<T, Serializer, Deserializer> implements Separatabl
 	
 	@Override
 	public void updateItemSize(int size) throws IOException {
+		if (size == this.itemSize) {
+			return;
+		}
 		this.itemSize = size;
 		this.segmentSize = getSegmentNumber(size - 1) + 1;
 		Serializer serializer = null;

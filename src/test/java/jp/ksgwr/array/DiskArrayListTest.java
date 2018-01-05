@@ -8,7 +8,7 @@ public class DiskArrayListTest extends MemoryArrayTest {
 
 	@Override
 	protected ExArrayList<Integer> initExArrayList() throws Exception {
-		return new DiskArrayList<Integer>(Integer.class, directory, super.size);
+		return new DiskArrayList<Integer>(Integer.class, new InfoSegmentIndex<>(directory, "", new TextIntegerIndexer()), super.size);
 	}
 
 }

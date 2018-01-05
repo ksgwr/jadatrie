@@ -38,10 +38,9 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	 * constructor
 	 * @param target target class
 	 * @param index index
-	 * @param vals current vals, can set null (on memory).
 	 */
-	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T[] vals) {
-		this(target, index, vals, 0);
+	public IndexIterator(Class<T> target, SeparatableIndex<T> index) {
+		this(target, index, null, 0);
 	}
 
 	/**
@@ -54,12 +53,22 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T[] vals, int i) {
 		this.index = index;
 		this.target = target;
-		this.vals = vals;
 		this.i = i;
 		this.size = index.getItemSize();
 		this.segmentNum = index.getSegmentNumber(i);
 		this.segmentOffset = index.getOffset(segmentNum);
 		this.nextSegmentOffset = segmentOffset + index.getItemPerSegmentSize(segmentNum);
+		if (vals == null) {
+			try {
+				this.vals = index.loadSegment(segmentNum, target);
+			} catch (ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		} else {
+			this.vals = vals;
+		}
 	}
 
 	@Override
