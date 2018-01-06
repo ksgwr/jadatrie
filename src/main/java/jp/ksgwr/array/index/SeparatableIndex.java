@@ -1,4 +1,4 @@
-package jp.ksgwr.array;
+package jp.ksgwr.array.index;
 
 import java.io.IOException;
 import java.io.Serializable;

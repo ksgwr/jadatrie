@@ -1,4 +1,4 @@
-package jp.ksgwr.array;
+package jp.ksgwr.array.index;
 
 import java.io.File;
 import java.io.FilenameFilter;

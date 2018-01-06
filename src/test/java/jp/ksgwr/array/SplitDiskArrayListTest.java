@@ -2,6 +2,9 @@ package jp.ksgwr.array;
 
 import java.io.File;
 
+import jp.ksgwr.array.index.InfoFixSeparateSegmentIndex;
+import jp.ksgwr.array.index.TextIntegerIndexer;
+
 public class SplitDiskArrayListTest extends MemoryArrayTest {
 
 	protected File directory = new File("target", "splitDiskArrayTest");

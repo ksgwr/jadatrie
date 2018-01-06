@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ListIterator;
 
+import jp.ksgwr.array.index.SeparatableIndex;
+
 /**
  * index iterator
  *

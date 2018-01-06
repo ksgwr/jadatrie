@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import jp.ksgwr.array.index.SeparatableIndex;
+
 /**
  * Extra Array List
  * this list is constant capacity size.

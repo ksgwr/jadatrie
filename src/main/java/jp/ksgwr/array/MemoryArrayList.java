@@ -9,6 +9,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.ListIterator;
 
+import jp.ksgwr.array.index.SeparatableIndex;
+
 /**
  * Memory Array List
  *

@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 
+import jp.ksgwr.array.index.SeparatableIndex;
+
 /**
  * Cached Memory Array List (more speedy get and set)
  *

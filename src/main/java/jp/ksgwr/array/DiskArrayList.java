@@ -10,6 +10,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import jp.ksgwr.array.index.InfoFixSeparateSegmentIndex;
+import jp.ksgwr.array.index.InfoSegmentIndex;
+import jp.ksgwr.array.index.ObjectStreamIndexer;
+import jp.ksgwr.array.index.SeparatableIndex;
+
 /**
  * TODO: rename PartialCachedIndexArrayList
  * @author kohei
