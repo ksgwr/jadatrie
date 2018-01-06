@@ -2,6 +2,7 @@ package jp.ksgwr.array;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Array;
 
 /**
  * Cached Memory Array List (more speedy get and set)
@@ -44,11 +45,20 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	 * @param size initial array size
 	 * @param resizeCapacity resize capacity size
 	 */
+	@SuppressWarnings("unchecked")
 	public CachedMemoryArrayList(Class<T> target, int size, int resizeCapacity) {
-		super(target, size, resizeCapacity);
-		this.valIndex = 0;
-		this.val = vals.get(0);
-		this.offset = 0;
+		this(target, (T[])Array.newInstance(target, size), resizeCapacity);
+	}
+
+	/**
+	 * constructor
+	 * @param target target class
+	 * @param val initial val array
+	 * @param resizeCapacity resize capacity size
+	 */
+	public CachedMemoryArrayList(Class<T> target, T[] val, int resizeCapacity) {
+		super(target, val, resizeCapacity);
+		initCache();
 	}
 
 	/**

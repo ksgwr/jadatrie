@@ -2,11 +2,13 @@ package jp.ksgwr.array;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,6 +37,11 @@ public class MemoryArrayTest {
 
 	protected ExArrayList<Integer> initExArrayList() throws Exception {
 		return new MemoryArrayList<Integer>(Integer.class, size);
+	}
+
+	@After
+	public void close() throws IOException {
+		ary.close();
 	}
 
 	@Test

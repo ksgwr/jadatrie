@@ -96,12 +96,16 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	}
 
 	@Override
-	public void updateItemSize(int size) throws IOException {
+	public void updateItemSize(int size){
 		if (size == this.itemSize) {
 			return;
 		}
 		this.itemSize = size;
 		this.segmentSize = getSegmentNumber(size - 1) + 1;
+	}
+
+	@Override
+	public void saveInfo() throws IOException {
 		Serializer serializer = null;
 		try {
 			serializer = indexer.openSerializer(infoFile, false);
@@ -111,7 +115,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 				indexer.closeSerializer(serializer);
 			}
 		}
-	}
+	};
 
 	@SuppressWarnings("unchecked")
 	@Override

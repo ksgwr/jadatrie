@@ -55,11 +55,20 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	 */
 	@SuppressWarnings("unchecked")
 	public MemoryArrayList(Class<T> target, int size, int resizeCapacity) {
+		this(target, (T[])Array.newInstance(target, size), resizeCapacity);
+	}
+
+	/**
+	 * constructor
+	 * @param target target class
+	 * @param val initial val array
+	 * @param resizeCapacity resize capacity size
+	 */
+	public MemoryArrayList(Class<T> target, T[] val, int resizeCapacity) {
 		super(target);
-		this.size = size;
-		this.allocateSize = size;
+		this.size = val.length;
+		this.allocateSize = val.length;
 		this.lastOffset = 0;
-		T[] val = (T[]) Array.newInstance(target, size);
 		this.vals = new ArrayList<T[]>(resizeCapacity);
 		vals.add(val);
 	}
@@ -345,21 +354,21 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	private boolean batchRemove(Collection<?> c, boolean complement) {
-        int w = 0;
-        boolean modified = false;
-        for (int i = 0; i < size; i++) {
-        	T val = this.get(i);
-            if (c.contains(val) == complement) {
-            	this.set(w++, val);
-            }
-        }
-        if (w != size) {
-        	size = w;
-        	modified = true;
-        	removeUnuseArray();
-        }
-        return modified;
-    }
+		int w = 0;
+		boolean modified = false;
+		for (int i = 0; i < size; i++) {
+			T val = this.get(i);
+			if (c.contains(val) == complement) {
+				this.set(w++, val);
+			}
+		}
+		if (w != size) {
+			size = w;
+			modified = true;
+			removeUnuseArray();
+		}
+		return modified;
+	}
 
 	@Override
 	public void clear() {

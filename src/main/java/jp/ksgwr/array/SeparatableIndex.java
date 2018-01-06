@@ -73,10 +73,15 @@ public interface SeparatableIndex<T extends Serializable> {
 
 	/**
 	 * update item size
-	 * @param size new size
-	 * @throws IOException file error
+	 * @param size new sizeW
 	 */
-	public void updateItemSize(int size) throws IOException;
+	public void updateItemSize(int size);
+
+	/**
+	 * save info (ex. itemSize, segmentSize)
+	 * @throws IOException
+	 */
+	public void saveInfo() throws IOException;
 
 	/**
 	 * is index exist
