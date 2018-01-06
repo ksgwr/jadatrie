@@ -3,6 +3,7 @@ package jp.ksgwr.array;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.Collection;
 
 import jp.ksgwr.array.index.SeparatableIndex;
 
@@ -113,6 +114,38 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 			tmpi = searchRelativeIndex(tmpi, i);
 			return this.val[tmpi] = t;
 		}
+	}
+
+	@Override
+	public boolean addAll(int index, Collection<? extends T> c) {
+		boolean modified = super.addAll(index, c);
+		this.initCache();
+		return modified;
+	}
+
+	@Override
+	public boolean addAll(int index, T[] val) {
+		boolean modified = super.addAll(index, val);
+		this.initCache();
+		return modified;
+	}
+
+	@Override
+	public boolean removeAll(Collection<?> c) {
+		boolean modified = super.removeAll(c);
+		if (modified) {
+			this.initCache();
+		}
+		return modified;
+	}
+
+	@Override
+	public boolean retainAll(Collection<?> c) {
+		boolean modified = super.retainAll(c);
+		if (modified) {
+			this.initCache();
+		}
+		return modified;
 	}
 
 	/**
