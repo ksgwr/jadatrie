@@ -115,7 +115,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 				indexer.closeSerializer(serializer);
 			}
 		}
-	};
+	}
 
 	@SuppressWarnings("unchecked")
 	@Override
