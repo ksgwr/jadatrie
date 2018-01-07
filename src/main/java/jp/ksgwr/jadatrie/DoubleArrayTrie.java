@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,10 +19,13 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import jp.ksgwr.array.CachedMemoryArrayList;
+import jp.ksgwr.array.ExArrayList;
+
 public class DoubleArrayTrie<T> {
 
 	//Suppose that there are n nodes in the trie, and the alphabet is of size m. The size of the double-array structure would be n + cm, where c is a coefficient which is dependent on the characteristic of the trie. And the time complexity of the brute force algorithm would be O(nm + cm2).
-	private static class Unit {
+	private static class Unit implements Serializable {
 		int base;
 		int check;
 
@@ -51,7 +55,7 @@ public class DoubleArrayTrie<T> {
 
 	private Class<T> target;
 
-	private Unit units[];
+	private ExArrayList<Unit> units;
 
 	// UTF-16だと圧縮率が悪い、頻度順にソートして高い頻度に低い番号をつけると圧縮率が良い
 	private int[] codes;
@@ -72,7 +76,7 @@ public class DoubleArrayTrie<T> {
     }
 
     public int getDoubleArraySize() {
-    	return units.length;
+    	return units.size();
     }
 
     public int getKeySize() {
@@ -189,12 +193,13 @@ public class DoubleArrayTrie<T> {
 		if (unitSize < 0) {
 			unitSize = size;
 		}
-    	this.units = new Unit[unitSize];
-    	units[0] = new Unit(1, 0);
+    	this.units = new CachedMemoryArrayList<Unit>(Unit.class, unitSize);
+    	units.set(0,  new Unit(1, 0));
 
     	this.currentPos = 0;
     	insert(siblings, 0);
 
+    	units.compress();
     }
 
     private void fetch(EfficientNodeList newSiblings, Node root, int depth) {
@@ -244,9 +249,7 @@ public class DoubleArrayTrie<T> {
 
     protected void resize(int newSize) {
     	System.out.println("resize:"+newSize);
-    	Unit[] newUnits = new Unit[newSize];
-    	System.arraycopy(units, 0, newUnits, 0, units.length);
-    	this.units = newUnits;
+    	this.units.resize(newSize);
     }
 
     private int insert(List<Node> siblings, int depth) {
@@ -258,11 +261,11 @@ public class DoubleArrayTrie<T> {
     	}
     	loop: while(true) {
     		currentPos++;
-    		if (units.length <= currentPos + maxCode) {
-    			resize(units.length + currentPos + maxCode + keys.length - siblings.get(siblings.size() - 1).right);
+    		if (units.size() <= currentPos + maxCode) {
+    			resize(units.size() + currentPos + maxCode + keys.length - siblings.get(siblings.size() - 1).right);
     		}
     		for (Node node:siblings) {
-    			Unit unit = units[currentPos + node.code];
+    			Unit unit = units.get(currentPos + node.code);
     			if (unit != null && unit.check != 0) {
     				continue loop;
     			}
@@ -271,7 +274,7 @@ public class DoubleArrayTrie<T> {
     	}
     	int base = currentPos;
     	for (Node node:siblings) {
-    		units[base + node.code] = new Unit(0, base);
+    		units.set(base + node.code, new Unit(0, base));
     	}
 
     	int newDepth = depth + 1;
@@ -279,12 +282,16 @@ public class DoubleArrayTrie<T> {
     	for (Node node:siblings) {
     		// 子のリストのオブジェクトは可能な限り使い回す
     		fetch(newSiblings, node, newDepth);
+    		int i = base + node.code;
+    		Unit unit = units.get(i);
     		if (newSiblings.size()==0) {
     			// 終端のindexの値をマイナス値に変換
-    			units[base + node.code].base = -node.left - 1;
+    			unit.base = -node.left - 1;
     		} else {
-    			units[base + node.code].base = insert(newSiblings, newDepth);
+    			unit.base = insert(newSiblings, newDepth);
     		}
+    		// 更新情報を伝えるため明示的にsetを呼び出す
+			units.set(i, unit);
     	}
 
     	return base;
@@ -298,11 +305,11 @@ public class DoubleArrayTrie<T> {
     	List<Integer> results = new ArrayList<Integer>();
 
     	Unit unit;
-    	int base = units[nodePos].base;
+    	int base = units.get(nodePos).base;
     	int next;
     	int i = start;
 		for (i = start; i < end; i++) {
-			unit = units[base];
+			unit = units.get(base);
     		// check end of string
     		if (unit != null && (next = unit.base) < 0) {
     			results.add(-next - 1);
@@ -312,7 +319,7 @@ public class DoubleArrayTrie<T> {
     			return new SearchResult(results, base, i);
     		}
     		next = base + c;
-    		unit = units[next];
+    		unit = units.get(next);
     		if (unit != null && base == unit.check) {
     			base = unit.base;
     		} else {
@@ -320,7 +327,7 @@ public class DoubleArrayTrie<T> {
     		}
     	}
 		// 最後の文字の終端チェック
-    	if ((unit = units[base]) != null && (next = unit.base) < 0) {
+    	if ((unit = units.get(base)) != null && (next = unit.base) < 0) {
     		results.add(-next - 1);
     	}
 
@@ -335,7 +342,7 @@ public class DoubleArrayTrie<T> {
     	List<Integer> results = new ArrayList<Integer>();
 
     	Unit unit;
-    	int base = units[nodePos].base;
+    	int base = units.get(nodePos).base;
     	int next;
     	int i;
     	for (i = start; i < end; i++) {
@@ -344,14 +351,14 @@ public class DoubleArrayTrie<T> {
     			return new SearchResult(results, base, i);
     		}
     		next = base + c;
-    		unit = units[next];
+    		unit = units.get(next);
     		if (unit != null && base == unit.check) {
     			base = unit.base;
     		} else {
     			return new SearchResult(results, base, i);
     		}
     	}
-    	if ((unit = units[base]) != null && (next = unit.base) < 0) {
+    	if ((unit = units.get(base)) != null && (next = unit.base) < 0) {
     		results.add(-next - 1);
     	}
 
@@ -388,7 +395,7 @@ public class DoubleArrayTrie<T> {
 
     	boolean isCheck = true;
     	Unit unit, tmpUnit = null;
-    	int base = units[nodePos].base, tmpBase;
+    	int base = units.get(nodePos).base, tmpBase;
     	int next, tmpNext;
     	int i, c, tmpc;
     	for (i = start; i < end; i++) {
@@ -402,12 +409,18 @@ public class DoubleArrayTrie<T> {
     					continue;
     				}
     				tmpNext = base + j;
-    				tmpUnit = units[tmpNext];
+    				if (units.size() <= tmpNext) {
+						continue;
+					}
+    				tmpUnit = units.get(tmpNext);
     				if (tmpUnit != null && base == tmpUnit.check) {
     					// 次の遷移をチェックすることで無駄な関数呼び出しを防ぐ
     					tmpBase = tmpUnit.base;
     					tmpNext = tmpBase + c;
-    					tmpUnit = units[tmpNext];
+    					if (units.size() <= tmpNext) {
+    						continue;
+    					}
+    					tmpUnit = units.get(tmpNext);
     					if (tmpUnit != null && tmpBase == tmpUnit.check) {
     						// 任意の文字を削除した場合の次の遷移先が見つかった
     						SearchResult tmpResult = exactSpellerMatch(target,maxDist - 1, canAdd, canDelete, canReplace,i + 1, end, tmpNext);
@@ -419,12 +432,15 @@ public class DoubleArrayTrie<T> {
 
 
     		next = base + c;
-    		unit = units[next];
+    		if (units.size() <= next) {
+				continue;
+			}
+    		unit = units.get(next);
 
     		isCheck = false;
     		if(i + 1 == end && maxDist > 0 && canAdd) {
     			//last char
-				tmpUnit = units[base];
+				tmpUnit = units.get(base);
 				if (tmpUnit != null && (tmpNext = tmpUnit.base) < 0) {
 					results.add(-tmpNext -1);
 				}
@@ -446,11 +462,17 @@ public class DoubleArrayTrie<T> {
 								continue;
 							}
 							tmpNext = base + j;
-							tmpUnit = units[tmpNext];
+							if (units.size() <= tmpNext) {
+	    						continue;
+	    					}
+							tmpUnit = units.get(tmpNext);
 							if (tmpUnit != null && base == tmpUnit.check) {
 								tmpBase = tmpUnit.base;
 								tmpNext = tmpBase + tmpc;
-								tmpUnit = units[tmpNext];
+								if (units.size() <= tmpNext) {
+		    						continue;
+		    					}
+								tmpUnit = units.get(tmpNext);
 								if (tmpUnit != null && tmpBase == tmpUnit.check) {
 									// ひとつ先の遷移先が見つかった
 									SearchResult tmpResult = exactSpellerMatch(target,
@@ -470,9 +492,12 @@ public class DoubleArrayTrie<T> {
 							continue;
 						}
 						tmpNext = base + j;
-						tmpUnit = units[tmpNext];
+						if (units.size() <= tmpNext) {
+    						continue;
+    					}
+						tmpUnit = units.get(tmpNext);
 						if (tmpUnit != null && base == tmpUnit.check && (tmpBase = tmpUnit.base) >= 0 &&
-	    						(tmpUnit = units[tmpBase]) != null && (tmpNext = tmpUnit.base) < 0) {
+	    						(tmpUnit = units.get(tmpBase)) != null && (tmpNext = tmpUnit.base) < 0) {
 							results.add(-tmpNext - 1);
 						}
 					}
@@ -498,7 +523,10 @@ public class DoubleArrayTrie<T> {
 						c = codes[target.charAt(i + 1)];
 						if (c != 0) {
 							tmpNext = base + c;
-							tmpUnit = units[tmpNext];
+							if (units.size() <= tmpNext) {
+	    						continue;
+	    					}
+							tmpUnit = units.get(tmpNext);
 							if (tmpUnit != null && base == tmpUnit.check) {
 								SearchResult tmpResult = exactSpellerMatch(target,
 										maxDist - 1, canAdd, canDelete,
@@ -518,15 +546,18 @@ public class DoubleArrayTrie<T> {
     			// 最後の文字を消す場合（終端にたどり着くかをチェック)
 				for (int j = 0; j < codeLength; j++) {
 					tmpNext = base + j;
-    				tmpUnit = units[tmpNext];
+					if (units.size() <= tmpNext) {
+						continue;
+					}
+    				tmpUnit = units.get(tmpNext);
     				if (tmpUnit != null && base == tmpUnit.check && (tmpBase = tmpUnit.base) >= 0 &&
-    						(tmpUnit = units[tmpBase]) != null && (tmpNext = tmpUnit.base) < 0) {
+    						(tmpUnit = units.get(tmpBase)) != null && (tmpNext = tmpUnit.base) < 0) {
     					results.add(-tmpNext - 1);
     				}
 				}
     		}
 
-    		if ((unit = units[base]) != null && (next = unit.base) < 0) {
+    		if ((unit = units.get(base)) != null && (next = unit.base) < 0) {
     			results.add(-next - 1);
     		}
     	}
@@ -538,9 +569,9 @@ public class DoubleArrayTrie<T> {
 		int next;
 		for (int i = 1; i < codeLength; i++) {
 			next = base + i;
-			unit = units[next];
+			unit = units.get(next);
 			if (unit != null && base == unit.check) {
-				queue.add(units[next].base);
+				queue.add(units.get(next).base);
 			}
 		}
 	}
@@ -574,7 +605,7 @@ public class DoubleArrayTrie<T> {
      * @param base
      */
 	protected final void collectId(List<Integer> ids, int nodePos) {
-		Unit unit = units[nodePos];
+		Unit unit = units.get(nodePos);
 		int next;
 		if (unit != null && (next = unit.base) < 0) {
 			ids.add(-next - 1);
@@ -608,7 +639,7 @@ public class DoubleArrayTrie<T> {
 
     public int walkNode(String target, int start, int end, int nodePos) {
     	Unit unit;
-    	int base = units[nodePos].base;
+    	int base = units.get(nodePos).base;
     	int next;
     	int i;
     	for (i = start; i < end; i++) {
@@ -617,14 +648,14 @@ public class DoubleArrayTrie<T> {
     			return -1;
     		}
     		next = base + c;
-    		unit = units[next];
+    		unit = units.get(next);
     		if (unit != null && base == unit.check) {
     			base = unit.base;
     		} else {
     			return -1;
     		}
     	}
-    	if ((unit = units[base]) != null && (next = unit.base) < 0) {
+    	if ((unit = units.get(base)) != null && (next = unit.base) < 0) {
     		return base;
     	}
     	return i;
@@ -650,15 +681,15 @@ public class DoubleArrayTrie<T> {
 			return;
 		}
 		int startNodePos = nodePos;
-    	int check = units[nodePos].check;
+    	int check = units.get(nodePos).check;
     	Unit unit;
 		for (; 0 <= nodePos; nodePos--) {
-			if ((unit = units[nodePos]) != null && unit.base == check) {
+			if ((unit = units.get(nodePos)) != null && unit.base == check) {
 				break;
 			}
 		}
 
-    	int c = startNodePos - units[nodePos].base;
+    	int c = startNodePos - units.get(nodePos).base;
     	if (c == 0) {
     		sb.append('#');
     	} else {
@@ -672,7 +703,7 @@ public class DoubleArrayTrie<T> {
 		try {
 			out = new DataOutputStream(new BufferedOutputStream(
 					new FileOutputStream(file)));
-			out.writeInt(units.length);
+			out.writeInt(units.size());
 			// TODO: 末尾の未使用領域を削除すると後の効率的に良い
 			for(Unit unit:units) {
 				boolean isNotNull = unit != null;
@@ -704,13 +735,13 @@ public class DoubleArrayTrie<T> {
 					new FileInputStream(file)));
 
 			int len = is.readInt();
-			this.units = new Unit[len];
+			this.units = new CachedMemoryArrayList<Unit>(Unit.class, len);
 			for (int i=0;i<len;i++) {
 				boolean b = is.readBoolean();
 				if (b) {
 					int base = is.readInt();
 					int check = is.readInt();
-					this.units[i] = new Unit(base, check);
+					units.set(i, new Unit(base, check));
 				}
 			}
 			len = is.readInt();
