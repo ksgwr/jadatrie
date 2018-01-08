@@ -132,6 +132,11 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 					lastVal[i - lastOffset] = null;
 				}
 			}
+			// sizeが0の場合は不要な配列を削除
+			if (this.allocateSize == 0) {
+				this.vals.remove(0);
+			}
+
 			// 新領域の確保
 			if (this.allocateSize < size) {
 				T[] val = (T[]) Array.newInstance(target, size - this.allocateSize);

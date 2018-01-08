@@ -4,6 +4,8 @@ import java.util.AbstractList;
 import java.util.List;
 import java.util.RandomAccess;
 
+import jp.ksgwr.jadatrie.core.Node;
+
 public class EfficientNodeList extends AbstractList<Node>
 implements List<Node>, RandomAccess, Cloneable, java.io.Serializable
 {

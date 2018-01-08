@@ -264,4 +264,15 @@ public class MemoryArrayTest {
 		assertEquals(new Integer(10), subList.get(1));
 		assertEquals(new Integer(11), subList.get(2));
 	}
+
+	@Test
+	public void createEmptyIndexTest() {
+		ary.resize(0);
+		assertEquals(0, ary.size());
+		ary.resize(10);
+		assertEquals(10, ary.size());
+		for (Integer i = 0; i < ary.size(); i++) {
+			assertNull(ary.get(i));
+		}
+	}
 }

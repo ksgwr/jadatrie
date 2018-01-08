@@ -9,11 +9,13 @@ public class KeyDoubleArrayTrie extends DoubleArrayTrie<Boolean> {
 	}
 
 	public void build(String[] key) {
-		super.build(new KeyArrayIterator(key), key.length);
+		super.setKeyValue(key, null);
+		super.build(new KeyArrayIterator(key), key.length, false);
 	}
 
 	public void build(List<String> key) {
-		super.build(new KeyListIterator(key), key.size());
+		super.setKeyValue(key, null);
+		super.build(new KeyListIterator(key), key.size(), false);
 	}
 
 }

@@ -1,10 +1,10 @@
-package jp.ksgwr.jadatrie;
+package jp.ksgwr.jadatrie.core;
 
 public class Node {
 
-	int code; //0が終端、それ以外は文字コード+1
-	int left;
-	int right;
+	public int code; //0が終端、それ以外は文字コード+1
+	public int left;
+	public int right;
 
 	public Node(int code,int left,int right) {
 		this.code = code;

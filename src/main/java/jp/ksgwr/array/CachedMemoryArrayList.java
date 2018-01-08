@@ -76,7 +76,7 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 				this.val = vals.get(valIndex);
 				this.offset -= val.length;
 				relativePosition = absolutePosition - offset;
-				if (relativePosition < val.length) {
+				if (relativePosition < val.length && 0 <= relativePosition) {
 					break;
 				}
 			}

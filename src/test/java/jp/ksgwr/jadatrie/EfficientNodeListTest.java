@@ -4,6 +4,8 @@ import static org.junit.Assert.*;
 
 import java.util.Iterator;
 
+import jp.ksgwr.jadatrie.core.Node;
+
 import org.junit.Test;
 
 public class EfficientNodeListTest {
