@@ -4,6 +4,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
+import jp.ksgwr.jadatrie.core.KeyValue;
+
 public class KeyListIterator implements Iterator<Entry<String, Boolean>>{
 
 	private Iterator<String> ite;

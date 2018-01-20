@@ -2,8 +2,12 @@ package jp.ksgwr.jadatrie.core;
 
 public class Node {
 
-	public int code; //0が終端、それ以外は文字コード+1
+	/** character code, 0=end of node, and incremental code */
+	public int code;
+
+	/** lower key index number */
 	public int left;
+	/** upper key index number */
 	public int right;
 
 	public Node(int code,int left,int right) {

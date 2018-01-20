@@ -32,12 +32,8 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	/** last value offset (for efficiency "add" ) */
 	protected int lastOffset;
 
-	/**
-	 * constructor
-	 * @param target target class
-	 */
-	protected MemoryArrayList(Class<T> target) {
-		super(target);
+	public MemoryArrayList(Class<T> target, int size) {
+		this(target, null, size, 10);
 	}
 
 	/**
@@ -45,8 +41,13 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	 * @param target target class
 	 * @param size initial array size
 	 */
-	public MemoryArrayList(Class<T> target, int size) {
-		this(target, size, 10);
+	public MemoryArrayList(Class<T> target, T defaultValue, int size) {
+		this(target, defaultValue, size, 10);
+	}
+
+	@SuppressWarnings("unchecked")
+	public MemoryArrayList(Class<T> target, int size, int resizeCapacity) {
+		this(target, null, (T[])Array.newInstance(target, size), resizeCapacity);
 	}
 
 	/**
@@ -56,8 +57,12 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	 * @param resizeCapacity resize capacity size
 	 */
 	@SuppressWarnings("unchecked")
-	public MemoryArrayList(Class<T> target, int size, int resizeCapacity) {
-		this(target, (T[])Array.newInstance(target, size), resizeCapacity);
+	public MemoryArrayList(Class<T> target, T defaultValue, int size, int resizeCapacity) {
+		this(target, defaultValue, (T[])Array.newInstance(target, size), resizeCapacity);
+	}
+
+	public MemoryArrayList(Class<T> target, T[] val, int resizeCapacity) {
+		this(target, null, val, resizeCapacity);
 	}
 
 	/**
@@ -66,8 +71,8 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	 * @param val initial val array
 	 * @param resizeCapacity resize capacity size
 	 */
-	public MemoryArrayList(Class<T> target, T[] val, int resizeCapacity) {
-		super(target);
+	public MemoryArrayList(Class<T> target, T defaultValue, T[] val, int resizeCapacity) {
+		super(target, defaultValue);
 		this.size = val.length;
 		this.allocateSize = val.length;
 		this.lastOffset = 0;
@@ -81,7 +86,8 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 		for (T[] val: vals) {
 			int offset = tmpi - val.length;
 			if (offset < 0) {
-				return val[tmpi];
+				T v = val[tmpi];
+				return v == null ? defaultValue : v;
 			} else {
 				tmpi = offset;
 			}
@@ -213,7 +219,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 	public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException {
 		// copy all values
 		T[] val = (T[]) Array.newInstance(target, index.getItemSize());
-		IndexIterator<T> iterator = new IndexIterator<T>(target, index);
+		IndexIterator<T> iterator = new IndexIterator<T>(target, index, defaultValue);
 		while(iterator.hasNext()) {
 			val[iterator.index()] = iterator.next();
 		}
@@ -464,12 +470,12 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@Override
 	public ListIterator<T> listIterator() {
-		return new ListArrayIterator<T>(vals, size);
+		return new ListArrayIterator<T>(vals, size, defaultValue);
 	}
 
 	@Override
 	public ListIterator<T> listIterator(int index) {
-		return new ListArrayIterator<T>(vals, size, index);
+		return new ListArrayIterator<T>(vals, size, index, defaultValue);
 	}
 
 

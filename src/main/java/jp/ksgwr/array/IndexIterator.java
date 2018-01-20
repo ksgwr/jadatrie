@@ -36,13 +36,15 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	/** current values */
 	private T[] vals;
 
+	private T defaultValue;
+
 	/**
 	 * constructor
 	 * @param target target class
 	 * @param index index
 	 */
-	public IndexIterator(Class<T> target, SeparatableIndex<T> index) {
-		this(target, index, null, 0);
+	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T defaultValue) {
+		this(target, index, defaultValue, null, 0);
 	}
 
 	/**
@@ -52,9 +54,10 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	 * @param vals current vals
 	 * @param i index
 	 */
-	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T[] vals, int i) {
+	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T defaultValue, T[] vals, int i) {
 		this.index = index;
 		this.target = target;
+		this.defaultValue = defaultValue;
 		this.i = i;
 		this.size = index.getItemSize();
 		this.segmentNum = index.getSegmentNumber(i);
@@ -93,7 +96,8 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 		}
 		int tmpi = i - segmentOffset;
 		i++;
-		return vals[tmpi];
+		T tmpVal = vals[tmpi];
+		return tmpVal == null ? defaultValue : tmpVal;
 	}
 
 	@Override
@@ -129,7 +133,8 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 		}
 		int tmpi = i - segmentOffset;
 		i--;
-		return vals[tmpi];
+		T tmpVal = vals[tmpi];
+		return tmpVal == null ? defaultValue : tmpVal;
 	}
 
 	@Override

@@ -39,6 +39,11 @@ public class MemoryArrayTest {
 		return new MemoryArrayList<Integer>(Integer.class, size);
 	}
 
+	protected ExArrayList<Integer> initExArrayListDefaultZero() throws Exception {
+		return new MemoryArrayList<Integer>(Integer.class, new Integer(0), size);
+	}
+
+
 	@After
 	public void close() throws IOException {
 		ary.close();
@@ -273,6 +278,15 @@ public class MemoryArrayTest {
 		assertEquals(10, ary.size());
 		for (Integer i = 0; i < ary.size(); i++) {
 			assertNull(ary.get(i));
+		}
+	}
+
+	@Test
+	public void getDefaultValueTest() throws Exception {
+		ary = initExArrayListDefaultZero();
+		assertEquals(size, ary.size());
+		for (Integer i = 0; i < ary.size(); i++) {
+			assertEquals(new Integer(0), ary.get(i));
 		}
 	}
 }

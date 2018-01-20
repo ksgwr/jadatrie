@@ -20,6 +20,12 @@ public interface SeparatableIndex<T extends Serializable> {
 	public int getItemSize();
 
 	/**
+	 * get alocate size
+	 * @return allocate size;
+	 */
+	public int getAllocateSize();
+
+	/**
 	 * get segment size
 	 * @return segment size
 	 */
@@ -60,9 +66,10 @@ public interface SeparatableIndex<T extends Serializable> {
 	 * save segment
 	 * @param segmentNum segment number
 	 * @param val target items
+	 * @param length save items max size
 	 * @throws IOException file error
 	 */
-	public void saveSegment(int segmentNum, T[] val) throws IOException;
+	public void saveSegment(int segmentNum, T[] val, int length) throws IOException;
 
 	/**
 	 * delete segment
@@ -76,6 +83,12 @@ public interface SeparatableIndex<T extends Serializable> {
 	 * @param size new sizeW
 	 */
 	public void updateItemSize(int size);
+
+	/**
+	 * reserve allocate size
+	 * @param size allocate new size (must larger than item size)
+	 */
+	public void reserveAllocateSize(int size);
 
 	/**
 	 * save info (ex. itemSize, segmentSize)

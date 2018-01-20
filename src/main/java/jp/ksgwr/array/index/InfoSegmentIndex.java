@@ -27,6 +27,9 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	/** index size */
 	protected int itemSize;
 
+	/** allocate index size */
+	protected int allocateSize;
+
 	/** segmentg size */
 	protected int segmentSize;
 
@@ -39,6 +42,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 		this.segPrefix = prefix + SEG_PREFIX;
 		this.segmentSize = 1;
 		this.indexer = indexer;
+		this.loadInfo();
 	}
 
 	protected File getSegmentFile(int segmentNum) {
@@ -47,10 +51,12 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 
 	protected void loadInfo(InfoSegmentIndexer<T,Serializer,Deserializer> indexer, Deserializer deserializer) throws IOException {
 		this.itemSize = indexer.deserializeIntProp(deserializer);
+		this.allocateSize = indexer.deserializeIntProp(deserializer);
 	}
 
 	protected void saveInfo(InfoSegmentIndexer<T,Serializer,Deserializer> indexer, Serializer serializer) throws IOException {
 		indexer.serializeIntProp(serializer, this.itemSize);
+		indexer.serializeIntProp(serializer, this.allocateSize);
 	}
 
 	/**
@@ -58,7 +64,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	 * @param infoFile
 	 * @throws IOException
 	 */
-	public void loadInfo() throws IOException {
+	protected void loadInfo() throws IOException {
 		Deserializer deserializer = null;
 		try {
 			deserializer = indexer.openDeserializer(infoFile, false);
@@ -73,6 +79,11 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	@Override
 	public int getItemSize() {
 		return itemSize;
+	}
+
+	@Override
+	public int getAllocateSize() {
+		return allocateSize;
 	}
 
 	@Override
@@ -92,7 +103,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 
 	@Override
 	public int getItemPerSegmentSize(int segmentNum) {
-		return itemSize;
+		return itemSize <= allocateSize ? allocateSize : itemSize;
 	}
 
 	@Override
@@ -101,6 +112,16 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 			return;
 		}
 		this.itemSize = size;
+		if (allocateSize < size) {
+			int lastSegmentNum = getSegmentNumber(size - 1);
+			int newAllocateSize = getOffset(lastSegmentNum) + getItemPerSegmentSize(lastSegmentNum);
+			reserveAllocateSize(newAllocateSize);
+		}
+	}
+
+	@Override
+	public void reserveAllocateSize(int size) {
+		this.allocateSize = size;
 		this.segmentSize = getSegmentNumber(size - 1) + 1;
 	}
 
@@ -132,7 +153,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 				int tmpSegmentNum = this.getSegmentNumber(i);
 				if (segmentNum < tmpSegmentNum) {
 					if (serializer != null) {
-						indexer.serializeSegment(serializer, vals);
+						indexer.serializeSegment(serializer, vals, tmpi);
 						indexer.closeSerializer(serializer);
 					}
 					segmentNum = tmpSegmentNum;
@@ -163,10 +184,17 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 			return vals;
 		}
 
+		// 読み込みの初期化を効率化する
+		int length;
+		if (segmentNum == segmentSize - 1) {
+			length = this.getItemSize() - this.getOffset(segmentNum);
+		} else {
+			length = valSize;
+		}
 		Deserializer deserializer = null;
 		try {
 			deserializer = indexer.openDeserializer(segmentFile, true);
-			indexer.deserializeSegment(deserializer, vals);
+			indexer.deserializeSegment(deserializer, vals, length);
 		} finally {
 			if (deserializer != null) {
 				indexer.closeDeserializer(deserializer);
@@ -177,12 +205,12 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	}
 
 	@Override
-	public void saveSegment(int segmentNum, T[] vals) throws IOException {
+	public void saveSegment(int segmentNum, T[] vals, int length) throws IOException {
 		Serializer serializer = null;
 		try {
 			File segFile = getSegmentFile(segmentNum);
 			serializer = indexer.openSerializer(segFile, true);
-			indexer.serializeSegment(serializer, vals);
+			indexer.serializeSegment(serializer, vals, length);
 		} finally {
 			if (serializer != null) {
 				indexer.closeSerializer(serializer);

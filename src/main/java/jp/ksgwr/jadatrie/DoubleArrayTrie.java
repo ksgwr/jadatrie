@@ -21,7 +21,9 @@ import java.util.TreeMap;
 import jp.ksgwr.array.CachedMemoryArrayList;
 import jp.ksgwr.array.ExArrayList;
 import jp.ksgwr.jadatrie.core.CharFreq;
+import jp.ksgwr.jadatrie.core.EfficientNodeList;
 import jp.ksgwr.jadatrie.core.Node;
+import jp.ksgwr.jadatrie.core.SearchResult;
 import jp.ksgwr.jadatrie.core.Unit;
 
 public class DoubleArrayTrie<T extends Serializable> {
@@ -31,12 +33,14 @@ public class DoubleArrayTrie<T extends Serializable> {
 	protected ExArrayList<Unit> units;
 
 	// UTF-16だと圧縮率が悪い、頻度順にソートして高い頻度に低い番号をつけると圧縮率が良い
-	protected int[] codes;
+	protected ExArrayList<Integer> codes;
 
 	protected int codeLength;
 
     protected List<String> keys;
     protected List<T> vals;
+
+    protected DoubleArrayTrieBuildListener debugger;
 
     // baseの値は衝突を考えないようにするために、常にincrementsしていく
     private int currentPos;
@@ -49,8 +53,17 @@ public class DoubleArrayTrie<T extends Serializable> {
     }
 
     public DoubleArrayTrie(Class<T> target, ExArrayList<Unit> units) {
+    	this(target, units, new CachedMemoryArrayList<Integer>(Integer.class, 0, Character.MAX_CODE_POINT, 1));
+    }
+
+    public DoubleArrayTrie(Class<T> target, ExArrayList<Unit> units, ExArrayList<Integer> codes) {
     	this.target = target;
     	this.units = units;
+    	this.codes = codes;
+    }
+
+    public void setBuildListener(DoubleArrayTrieBuildListener listener) {
+    	this.debugger = listener;
     }
 
     public Class<T> getValueClass() {
@@ -164,18 +177,18 @@ public class DoubleArrayTrie<T extends Serializable> {
 				return o2.count - o1.count;
 			}
 		});
-    	this.codes = new int[Character.MAX_CODE_POINT];
+    	this.codes.clear();
     	int num = 1;
 		for (CharFreq cf : cfs) {
 			if (cf == null) {
 				break;
 			}
-			this.codes[cf.code] = num++;
+			this.codes.set(cf.code, num++);
 		}
 		this.codeLength = num;
 		cfs = null;
 		for (Node node : siblings) {
-			node.code = codes[node.code];
+			node.code = codes.get(node.code);
 		}
 
     	// List<Node>を範囲(潜在ノード数)でソートすると効率が良い
@@ -205,7 +218,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     		String key = keys.get(i);
     		int len = key.length();
     		if (depth < len) {
-    			cur = codes[key.charAt(depth)];
+    			cur = codes.get(key.charAt(depth));
     		} else if (len == depth){
     			// end string
     			cur = 0;
@@ -218,7 +231,7 @@ public class DoubleArrayTrie<T extends Serializable> {
 
     		while(i < root.right) {
         		key = keys.get(i);
-        		cur = codes[key.charAt(depth)];
+        		cur = codes.get(key.charAt(depth));
 
         		if(prevc != cur) {
         			tmpnode.code = prevc;
@@ -260,18 +273,25 @@ public class DoubleArrayTrie<T extends Serializable> {
     		break;
     	}
     	int base = currentPos;
+    	if (base == 18897452) {
+    		System.out.println("test");
+    	}
     	for (Node node:siblings) {
     		units.set(base + node.code, new Unit(0, base));
     	}
 
+    	int count = 0;
     	int newDepth = depth + 1;
     	EfficientNodeList newSiblings = new EfficientNodeList();
     	for (Node node:siblings) {
+    		if (newDepth == 1) {
+    			System.out.println(count++ + ":" + System.currentTimeMillis());
+    		}
     		// 子のリストのオブジェクトは可能な限り使い回す
     		fetch(newSiblings, node, newDepth);
     		int i = base + node.code;
     		Unit unit = units.get(i);
-    		if (newSiblings.size()==0) {
+			if (newSiblings.size() == 0) {
     			// 終端のindexの値をマイナス値に変換
     			unit.base = -node.left - 1;
     		} else {
@@ -301,7 +321,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     		if (unit != null && (next = unit.base) < 0) {
     			results.add(-next - 1);
     		}
-    		int c = codes[target.charAt(i)];
+    		int c = codes.get(target.charAt(i));
     		if (c == 0) {
     			return new SearchResult(results, base, i);
     		}
@@ -333,7 +353,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     	int next;
     	int i;
     	for (i = start; i < end; i++) {
-    		int c = codes[target.charAt(i)];
+    		int c = codes.get(target.charAt(i));
     		if (c == 0) {
     			return new SearchResult(results, base, i);
     		}
@@ -387,7 +407,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     	int i, c, tmpc;
     	for (i = start; i < end; i++) {
 
-    		c = codes[target.charAt(i)];
+    		c = codes.get(target.charAt(i));
 
     		if (c != 0 && maxDist > 0 && canDelete) {
 				for (int j = 0; j < codeLength; j++) {
@@ -439,7 +459,7 @@ public class DoubleArrayTrie<T extends Serializable> {
 				// check next c == children.c
 				// 後でcanAddと重複部分をまとめる
 				if (i + 1 < end) {
-					tmpc = codes[target.charAt(i + 1)];
+					tmpc = codes.get(target.charAt(i + 1));
 					if (tmpc != 0) {
 						// 次の遷移先候補をcode分、線形探索して出す
 						// その候補の次がnext cと一致するものに対して関数を呼び出す
@@ -507,7 +527,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     				// get children
     				// check next c == children.c
 					if (i + 1 < end) {
-						c = codes[target.charAt(i + 1)];
+						c = codes.get(target.charAt(i + 1));
 						if (c != 0) {
 							tmpNext = base + c;
 							if (units.size() <= tmpNext) {
@@ -606,9 +626,9 @@ public class DoubleArrayTrie<T extends Serializable> {
 
     public int[] createCodeMap() {
     	int[] map = new int[codeLength];
-		for (int i = 0; i < codes.length; i++) {
-			if (codes[i] > 0) {
-				map[codes[i]] = i;
+		for (int i = 0; i < codes.size(); i++) {
+			if (codes.get(i) > 0) {
+				map[codes.get(i)] = i;
 			}
 		}
     	return map;
@@ -630,7 +650,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     	int next;
     	int i;
     	for (i = start; i < end; i++) {
-    		int c = codes[target.charAt(i)];
+    		int c = codes.get(target.charAt(i));
     		if (c == 0) {
     			return -1;
     		}
@@ -700,10 +720,10 @@ public class DoubleArrayTrie<T extends Serializable> {
 					out.writeInt(unit.check);
 				}
 			}
-			out.writeInt(codes.length);
+			out.writeInt(codes.size());
 			out.writeInt(codeLength);
-			for(int i=0;i<codes.length;i++) {
-				int code = codes[i];
+			for(int i=0;i<codes.size();i++) {
+				int code = codes.get(i);
 				if (code > 0) {
 					out.writeInt(i);
 					out.writeInt(code);
@@ -732,13 +752,13 @@ public class DoubleArrayTrie<T extends Serializable> {
 				}
 			}
 			len = is.readInt();
-			this.codes = new int[len];
+			this.codes = new CachedMemoryArrayList<Integer>(Integer.class, len);
 			this.codeLength = is.readInt();
 			len = this.codeLength - 1;
 			for (int i=0;i<len;i++) {
 				int idx = is.readInt();
 				int code = is.readInt();
-				this.codes[idx] = code;
+				this.codes.set(idx, code);
 			}
 		} finally {
 			if (is != null)
@@ -770,5 +790,10 @@ public class DoubleArrayTrie<T extends Serializable> {
     public void setKeyValue(String[] keys, T[] vals) {
     	List<T> valList = vals == null ? null : new CachedMemoryArrayList<T>(target, vals, 1);
     	this.setKeyValue(new CachedMemoryArrayList<String>(String.class, keys, 1), valList);
+    }
+
+    public void close() throws IOException {
+    	units.close();
+    	codes.close();
     }
 }

@@ -28,9 +28,10 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	/**
 	 * constructor
 	 * @param target target class
+	 * @param size initial array size
 	 */
-	protected CachedMemoryArrayList(Class<T> target) {
-		super(target);
+	public CachedMemoryArrayList(Class<T> target, int size) {
+		this(target, null, size, 10);
 	}
 
 	/**
@@ -38,8 +39,13 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	 * @param target target class
 	 * @param size initial array size
 	 */
-	public CachedMemoryArrayList(Class<T> target, int size) {
-		this(target, size, 10);
+	public CachedMemoryArrayList(Class<T> target, T defaultValue, int size) {
+		this(target, defaultValue, size, 10);
+	}
+
+	@SuppressWarnings("unchecked")
+	public CachedMemoryArrayList(Class<T> target, int size, int resizeCapacity) {
+		this(target, null, (T[])Array.newInstance(target, size), resizeCapacity);
 	}
 
 	/**
@@ -49,8 +55,13 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	 * @param resizeCapacity resize capacity size
 	 */
 	@SuppressWarnings("unchecked")
-	public CachedMemoryArrayList(Class<T> target, int size, int resizeCapacity) {
-		this(target, (T[])Array.newInstance(target, size), resizeCapacity);
+	public CachedMemoryArrayList(Class<T> target, T defaultValue, int size, int resizeCapacity) {
+		this(target, defaultValue, (T[])Array.newInstance(target, size), resizeCapacity);
+	}
+
+	public CachedMemoryArrayList(Class<T> target, T[] val, int resizeCapacity) {
+		super(target, null, val, resizeCapacity);
+		initCache();
 	}
 
 	/**
@@ -59,8 +70,8 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	 * @param val initial val array
 	 * @param resizeCapacity resize capacity size
 	 */
-	public CachedMemoryArrayList(Class<T> target, T[] val, int resizeCapacity) {
-		super(target, val, resizeCapacity);
+	public CachedMemoryArrayList(Class<T> target, T defaultValue, T[] val, int resizeCapacity) {
+		super(target, defaultValue, val, resizeCapacity);
 		initCache();
 	}
 
@@ -96,13 +107,15 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	@Override
 	public T get(int i) {
 		int tmpi = i - offset;
+		T v;
 		try {
 			// TODO: 未使用領域にアクセスする可能性はある
-			return this.val[tmpi];
+			v = val[tmpi];
 		} catch (ArrayIndexOutOfBoundsException e) {
 			tmpi = searchRelativeIndex(tmpi, i);
-			return this.val[tmpi];
+			v = val[tmpi];
 		}
+		return v == null ? defaultValue : v;
 	}
 
 	@Override

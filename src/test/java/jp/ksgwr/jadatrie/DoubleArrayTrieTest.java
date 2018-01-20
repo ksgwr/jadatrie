@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import jp.ksgwr.jadatrie.core.SearchResult;
+
 import org.junit.Before;
 import org.junit.Test;
 

@@ -3,6 +3,8 @@ package jp.ksgwr.jadatrie;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import jp.ksgwr.jadatrie.core.KeyValue;
+
 public class KeyArrayIterator implements Iterator<Entry<String, Boolean>>{
 
 	private String[] key;

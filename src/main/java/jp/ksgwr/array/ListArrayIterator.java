@@ -12,6 +12,9 @@ import java.util.ListIterator;
  */
 public class ListArrayIterator<T> implements ListIterator<T> {
 
+	/** default value at null */
+	private T defaultValue;
+
 	/** list array */
 	private List<T[]> vals;
 
@@ -35,19 +38,21 @@ public class ListArrayIterator<T> implements ListIterator<T> {
 	 * @param vals list array
 	 * @param size size
 	 */
-	public ListArrayIterator(List<T[]> vals, int size) {
+	public ListArrayIterator(List<T[]> vals, int size, T defaultValue) {
 		this.vals = vals;
 		this.size = size;
+		this.defaultValue = defaultValue;
 		this.i = 0;
 		this.currentIndex = 0;
 		this.valIndex = 0;
 		this.val = vals.get(0);
 	}
 
-	public ListArrayIterator(List<T[]> vals, int size, int index) {
+	public ListArrayIterator(List<T[]> vals, int size, int index, T defaultValue) {
 		this.vals = vals;
 		this.size = size;
 		this.i = index;
+		this.defaultValue = defaultValue;
 
 		this.currentIndex = 0;
 		this.valIndex = 0;
@@ -75,7 +80,8 @@ public class ListArrayIterator<T> implements ListIterator<T> {
 			this.val = vals.get(++valIndex);
 		}
 		i++;
-		return val[currentIndex++];
+		T v = val[currentIndex++];
+		return v == null ? defaultValue : v;
 	}
 
 	@Override
@@ -95,7 +101,8 @@ public class ListArrayIterator<T> implements ListIterator<T> {
 			this.val = vals.get(--valIndex);
 		}
 		i--;
-		return val[currentIndex--];
+		T v = val[currentIndex--];
+		return v == null ? defaultValue : v;
 	}
 
 	@Override

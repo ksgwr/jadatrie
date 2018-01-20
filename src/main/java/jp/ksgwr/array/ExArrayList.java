@@ -22,14 +22,26 @@ import jp.ksgwr.array.index.SeparatableIndex;
 public abstract class ExArrayList<T extends Serializable> implements List<T> {
 
 	/** item target class */
-	protected Class<T> target;
+	protected final Class<T> target;
+
+	protected final T defaultValue;
 
 	/**
 	 * constructor
 	 * @param target target class
 	 */
-	public ExArrayList(Class<T> target) {
+	protected ExArrayList(Class<T> target) {
 		this.target = target;
+		this.defaultValue = null;
+	}
+
+	/**
+	 * constructor
+	 * @param target target class
+	 */
+	protected ExArrayList(Class<T> target, T defaultValue) {
+		this.target = target;
+		this.defaultValue = defaultValue;
 	}
 
 	/**

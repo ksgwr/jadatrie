@@ -12,11 +12,11 @@ import java.io.OutputStreamWriter;
 public class TextIntegerIndexer implements InfoSegmentIndexer<Integer, BufferedWriter, BufferedReader> {
 
 	private static final String NULL = "null";
-	
+
 	public TextIntegerIndexer() {
-		
+
 	}
-	
+
 	@Override
 	public void closeSerializer(BufferedWriter serializer) throws IOException {
 		serializer.close();
@@ -38,8 +38,9 @@ public class TextIntegerIndexer implements InfoSegmentIndexer<Integer, BufferedW
 	}
 
 	@Override
-	public void serializeSegment(BufferedWriter serializer, Integer[] val) throws IOException {
-		for (Integer v : val) {
+	public void serializeSegment(BufferedWriter serializer, Integer[] val, int length) throws IOException {
+		for (int i=0;i<length;i++) {
+			Integer v = val[i];
 			if (v == null) {
 				serializer.write(NULL);
 			} else {
@@ -56,8 +57,8 @@ public class TextIntegerIndexer implements InfoSegmentIndexer<Integer, BufferedW
 	}
 
 	@Override
-	public void deserializeSegment(BufferedReader deserializer, Integer[] val) throws IOException, ClassNotFoundException {
-		for (int i=0;i<val.length;i++) {
+	public void deserializeSegment(BufferedReader deserializer, Integer[] val, int length) throws IOException, ClassNotFoundException {
+		for (int i=0;i<length;i++) {
 			String line = deserializer.readLine();
 			if (line == null) {
 				return;

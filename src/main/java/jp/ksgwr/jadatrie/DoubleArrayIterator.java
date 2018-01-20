@@ -4,6 +4,8 @@ import java.lang.reflect.Array;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import jp.ksgwr.jadatrie.core.KeyValue;
+
 public class DoubleArrayIterator<T> implements Iterator<Entry<String, T>>{
 
 	private Class<T> target;
@@ -21,7 +23,7 @@ public class DoubleArrayIterator<T> implements Iterator<Entry<String, T>>{
 		this.target = target;
 		this.i = 0;
 		if (this.val != null && key.length != val.length) {
-			throw new RuntimeException("key and val array must save size. key:"
+			throw new RuntimeException("key and val array must same size. key:"
 					+ key.length + ",val:" + val.length);
 		}
 	}

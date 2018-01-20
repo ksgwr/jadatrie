@@ -9,6 +9,8 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.zip.GZIPInputStream;
 
+import jp.ksgwr.jadatrie.core.KeyValue;
+
 public class Tester {
 
 	public static void main(String[] args) throws Exception {

@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import jp.ksgwr.jadatrie.core.KeyValue;
+
 public abstract class FileReadIterator<T> implements Iterator<Entry<String,T>> {
 
 	BufferedReader br;
@@ -43,6 +45,7 @@ public abstract class FileReadIterator<T> implements Iterator<Entry<String,T>> {
 			}
 		}
 		KeyValue<T> entry = readString(line);
+		init = false;
 		while (entry == null && this.hasNext()) {
 			entry = (KeyValue<T>) this.next();
 		}

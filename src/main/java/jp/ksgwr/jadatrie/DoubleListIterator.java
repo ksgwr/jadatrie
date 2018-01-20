@@ -4,6 +4,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
+import jp.ksgwr.jadatrie.core.KeyValue;
+
 public class DoubleListIterator<T> implements Iterator<Entry<String, T>>{
 
 	Iterator<String> key;
