@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Iterator;
+import java.util.Objects;
 
 public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> implements SeparableIndex<T> {
 
@@ -102,25 +103,33 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	}
 
 	@Override
-	public void updateItemSize(int size){
-		if (size == this.itemSize) {
-			return;
-		}
-		int oldSize = this.itemSize;
-		this.itemSize = size;
-		if (itemSize < oldSize) {
-			reserveAllocateSize(itemSize);
-		} else if (allocateSize < size) {
-			int lastSegmentNum = getSegmentNumber(size - 1);
-			int newAllocateSize = getOffset(lastSegmentNum) + getItemPerSegmentSize(lastSegmentNum);
-			reserveAllocateSize(newAllocateSize);
-		}
+	public void deleteSegment(int segmentNum) {
+		this.getSegmentFile(segmentNum).delete();
 	}
 
 	@Override
-	public void reserveAllocateSize(int size) {
+	public void increaseItemSize(int size) {
+		this.itemSize = size;
+		int lastSegmentNum = getSegmentNumber(size - 1);
+		int newAllocateSize = getOffset(lastSegmentNum) + getItemPerSegmentSize(lastSegmentNum);
+		increaseAllocateSize(newAllocateSize);
+	}
+
+	@Override
+	public void decreaseItemSize(int size) {
+		this.itemSize = size;
+	}
+
+	@Override
+	public void increaseAllocateSize(int size) {
 		this.allocateSize = size;
-		this.segmentSize = size > 0 ? getSegmentNumber(size - 1) + 1 : 1;
+		this.segmentSize = getSegmentNumber(allocateSize - 1) + 1;
+	}
+
+	@Override
+	public void decreaseAllocateSize(int size) {
+		this.allocateSize = size;
+		this.segmentSize = size == 0 ? 1 : getSegmentNumber(allocateSize - 1) + 1;
 	}
 
 	@Override
@@ -140,7 +149,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	@Override
 	public void save(Iterator<T> ite, int size, Class<T> target) throws IOException {
 		cleanup();
-		updateItemSize(size);
+		increaseItemSize(size);
 		int i = 0;
 		Serializer serializer = null;
 		try {
@@ -220,14 +229,12 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	@Override
 	public void cleanup() {
 		infoFile.delete();
-		for (File segFile : directory.listFiles((dir, name) -> name.startsWith(segPrefix))) {
-			segFile.delete();
+		File [] segList = directory.listFiles((dir, name) -> name.startsWith(segPrefix));
+		if (segList != null) {
+			for (File segFile : segList) {
+				segFile.delete();
+			}
 		}
-	}
-
-	@Override
-	public void deleteSegment(int segmentNum) {
-		this.getSegmentFile(segmentNum).delete();
 	}
 
 	@Override

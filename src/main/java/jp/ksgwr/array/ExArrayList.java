@@ -19,7 +19,7 @@ import jp.ksgwr.array.index.SeparableIndex;
  *
  * @param <T> item class
  */
-public abstract class ExArrayList<T extends Serializable> implements List<T> {
+public abstract class ExArrayList<T extends Serializable> implements List<T>, AutoCloseable {
 
 	/** item target class */
 	protected final Class<T> target;
@@ -88,10 +88,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 		index.save(this.iterator(), this.size(), target);
 	}
 
-	/**
-	 * close index
-	 * @throws IOException file error
-	 */
+	@Override
 	public void close() throws IOException {
 
 	}

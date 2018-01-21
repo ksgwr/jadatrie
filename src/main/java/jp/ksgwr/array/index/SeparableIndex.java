@@ -78,16 +78,30 @@ public interface SeparableIndex<T extends Serializable> {
 	void deleteSegment(int segmentNum);
 
 	/**
-	 * update item size
-	 * @param size new sizeW
+	 * increase item size and update allocate size and segment size if needed
+	 * decide segment number, offset, item per segment size
+	 * @param size new item size
 	 */
-	void updateItemSize(int size);
+	void increaseItemSize(int size);
 
 	/**
-	 * reserve allocate size
-	 * @param size allocate new size (must larger than item size)
+	 * decrease item size
+	 * decide segment number, offset, item per segment size
+	 * @param size new item size
 	 */
-	void reserveAllocateSize(int size);
+	void decreaseItemSize(int size);
+
+	/**
+	 * increase allocate size and update segment size if needed
+	 * @param size new allocate size
+	 */
+	void increaseAllocateSize(int size);
+
+	/**
+	 * decrease allocate size and update segment size if needed
+	 * @param size new allocate size
+	 */
+	void decreaseAllocateSize(int size);
 
 	/**
 	 * save info (ex. itemSize, segmentSize)
