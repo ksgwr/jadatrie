@@ -3,6 +3,8 @@ package jp.ksgwr.array;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ListIterator;
+import java.util.Map;
+import java.util.TreeMap;
 
 import jp.ksgwr.array.index.SeparableIndex;
 
@@ -21,6 +23,14 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	/** target class */
 	private final Class<T> target;
 
+	/** size */
+	private final int size;
+
+	/** default value in null */
+	private final T defaultValue;
+
+	private final Map<Integer, T[]> cacheSegment;
+
 	/** current index offset */
 	private int i;
 
@@ -30,51 +40,50 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 
 	private int nextSegmentOffset;
 
-	/** size */
-	private final int size;
-
 	/** current values */
 	private T[] vals;
 
-	private final T defaultValue;
+    public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue) {
+        this(target, index, defaultValue, 0, null);
+    }
+
 
 	/**
 	 * constructor
 	 * @param target target class
 	 * @param index index
-	 */
-	public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue) {
-		this(target, index, defaultValue, null, 0);
-	}
-
-	/**
-	 * constructor
-	 * @param target target class
-	 * @param index index
-	 * @param vals current vals
 	 * @param i index
 	 */
-	public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue, T[] vals, int i) {
+	public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue, int i, Map<Integer, T[]> cacheSegment) {
 		this.index = index;
 		this.target = target;
 		this.defaultValue = defaultValue;
+		this.cacheSegment = cacheSegment;
+
 		this.i = i;
 		this.size = index.getItemSize();
 		this.segmentNum = index.getSegmentNumber(i);
 		this.segmentOffset = index.getOffset(segmentNum);
 		this.nextSegmentOffset = segmentOffset + index.getItemPerSegmentSize(segmentNum);
-		if (vals == null) {
-			try {
-				this.vals = index.loadSegment(segmentNum, target);
-			} catch (ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		} else {
-			this.vals = vals;
-		}
+		this.vals = getSegment(segmentNum);
 	}
+
+	private T[] getSegment(int segmentNum) {
+        T[] vals = null;
+	    if (cacheSegment != null) {
+            vals = cacheSegment.get(segmentNum);
+        }
+	    if (vals == null) {
+            try {
+                vals = index.loadSegment(segmentNum, target);
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return vals;
+    }
 
 	@Override
 	public boolean hasNext() {
@@ -84,15 +93,9 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	@Override
 	public T next() {
 		if (i == nextSegmentOffset) {
-			try {
-				this.vals = index.loadSegment(++segmentNum, target);
-				this.segmentOffset = this.nextSegmentOffset;
-				this.nextSegmentOffset += this.vals.length;
-			} catch (ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
+            this.vals = getSegment(++segmentNum);
+            this.segmentOffset = this.nextSegmentOffset;
+            this.nextSegmentOffset += this.vals.length;
 		}
 		int tmpi = i - segmentOffset;
 		i++;
@@ -121,15 +124,9 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	@Override
 	public T previous() {
 		if (i < segmentOffset) {
-			try {
-				this.vals = index.loadSegment(--segmentNum, target);
-				this.nextSegmentOffset = this.segmentOffset;
-				this.segmentOffset -= this.vals.length;
-			} catch (ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
+            this.vals = getSegment(--segmentNum);
+            this.nextSegmentOffset = this.segmentOffset;
+            this.segmentOffset -= this.vals.length;
 		}
 		int tmpi = i - segmentOffset;
 		i--;

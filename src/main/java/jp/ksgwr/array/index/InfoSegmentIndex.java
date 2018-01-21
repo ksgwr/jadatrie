@@ -106,8 +106,11 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 		if (size == this.itemSize) {
 			return;
 		}
+		int oldSize = this.itemSize;
 		this.itemSize = size;
-		if (allocateSize < size) {
+		if (itemSize < oldSize) {
+			reserveAllocateSize(itemSize);
+		} else if (allocateSize < size) {
 			int lastSegmentNum = getSegmentNumber(size - 1);
 			int newAllocateSize = getOffset(lastSegmentNum) + getItemPerSegmentSize(lastSegmentNum);
 			reserveAllocateSize(newAllocateSize);
@@ -117,7 +120,7 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	@Override
 	public void reserveAllocateSize(int size) {
 		this.allocateSize = size;
-		this.segmentSize = getSegmentNumber(size - 1) + 1;
+		this.segmentSize = size > 0 ? getSegmentNumber(size - 1) + 1 : 1;
 	}
 
 	@Override

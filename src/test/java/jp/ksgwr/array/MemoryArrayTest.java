@@ -134,8 +134,26 @@ public class MemoryArrayTest {
 		ary.add(1, newVal);
 
 		assertEquals(oldSize + 1, ary.size());
+		assertEquals(new Integer(0), ary.get(0));
 		assertEquals(newVal, ary.get(1));
 		for (Integer i = 2; i < ary.size(); i++) {
+			assertEquals(new Integer(i - 1), ary.get(i));
+		}
+	}
+
+	@Test
+	public void addIndex2Test() {
+		int oldSize = ary.size();
+		Integer newVal = -1;
+
+		ary.add(15, newVal);
+
+		assertEquals(oldSize + 1, ary.size());
+		for (Integer i = 0; i < 15; i++) {
+			assertEquals(new Integer(i), ary.get(i));
+		}
+		assertEquals(newVal, ary.get(15));
+		for (Integer i = 16; i < ary.size(); i++) {
 			assertEquals(new Integer(i - 1), ary.get(i));
 		}
 	}
@@ -235,6 +253,21 @@ public class MemoryArrayTest {
 		assertEquals(oldSize - 1, ary.size());
 		assertEquals(new Integer(1), removeVal);
 		for (Integer i = 1; i < ary.size(); i++) {
+			assertEquals(new Integer(i + 1), ary.get(i));
+		}
+	}
+
+	@Test
+	public void removeIndex2Test() {
+		int oldSize = ary.size();
+
+		Integer removeVal = ary.remove(15);
+
+		assertEquals(oldSize - 1, ary.size());
+		for (Integer i = 0; i < 15; i++) {
+			assertEquals(new Integer(i), ary.get(i));
+		}
+		for (Integer i = 15; i < ary.size(); i++) {
 			assertEquals(new Integer(i + 1), ary.get(i));
 		}
 	}

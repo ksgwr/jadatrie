@@ -8,11 +8,7 @@ public class InfoFixSeparateSegmentIndex<T extends Serializable, Serializer, Des
 
 	protected int separateSize;
 
-	public InfoFixSeparateSegmentIndex(File directory, String prefix, InfoSegmentIndexer<T, Serializer, Deserializer> indexer) throws IOException {
-		super(directory, prefix, indexer);
-	}
-
-	public InfoFixSeparateSegmentIndex(File directory, String prefix, int separateSize, InfoSegmentIndexer<T, Serializer, Deserializer> indexer) throws IOException {
+	public InfoFixSeparateSegmentIndex(File directory, String prefix, int separateSize, InfoSegmentIndexer<T, Serializer, Deserializer> indexer) {
 		super(directory, prefix, indexer);
 		this.separateSize = separateSize;
 	}
