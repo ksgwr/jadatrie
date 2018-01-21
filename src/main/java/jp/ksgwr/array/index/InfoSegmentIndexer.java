@@ -5,20 +5,20 @@ import java.io.IOException;
 
 public interface InfoSegmentIndexer<T, Serializer, Deserializer> {
 
-	public void closeSerializer(Serializer serializer) throws IOException;
+	void closeSerializer(Serializer serializer) throws IOException;
 
-	public Serializer openSerializer(File file, boolean isSegment) throws IOException;
+	Serializer openSerializer(File file, boolean isSegment) throws IOException;
 
-	public void closeDeserializer(Deserializer deserializer) throws IOException;
+	void closeDeserializer(Deserializer deserializer) throws IOException;
 
-	public Deserializer openDeserializer(File file, boolean isSegment) throws IOException;
+	Deserializer openDeserializer(File file, boolean isSegment) throws IOException;
 
-	public void serializeSegment(Serializer serializer, T[] val, int length) throws IOException;
+	void serializeSegment(Serializer serializer, T[] val, int length) throws IOException;
 
-	public void serializeIntProp(Serializer serializer, int val) throws IOException;
+	void serializeIntProp(Serializer serializer, int val) throws IOException;
 
-	public void deserializeSegment(Deserializer deserializer, T[] val, int length) throws IOException, ClassNotFoundException;
+	void deserializeSegment(Deserializer deserializer, T[] val, int length) throws IOException, ClassNotFoundException;
 
-	public int deserializeIntProp(Deserializer deserializer) throws IOException;
+	int deserializeIntProp(Deserializer deserializer) throws IOException;
 
 }

@@ -6,15 +6,18 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import jp.ksgwr.jadatrie.core.KeyValue;
+import jp.ksgwr.jadatrie.core.KeyValueStringDeserializer;
 
-public abstract class FileReadIterator<T> implements Iterator<Entry<String,T>> {
+public class FileReadIterator<T> implements Iterator<Entry<String,T>> {
 
-	BufferedReader br;
-	String line;
-	boolean init;
+	private final BufferedReader br;
+	private final KeyValueStringDeserializer<T> deserializer;
+	private String line;
+	private boolean init;
 
-	public FileReadIterator(BufferedReader reader) {
+	public FileReadIterator(BufferedReader reader, KeyValueStringDeserializer<T> deserializer) {
 		this.br = reader;
+		this.deserializer = deserializer;
 		this.init = false;
 	}
 
@@ -44,15 +47,13 @@ public abstract class FileReadIterator<T> implements Iterator<Entry<String,T>> {
 				throw new RuntimeException(e);
 			}
 		}
-		KeyValue<T> entry = readString(line);
+		KeyValue<T> entry = deserializer.createKeyValue(line);
 		init = false;
 		while (entry == null && this.hasNext()) {
 			entry = (KeyValue<T>) this.next();
 		}
 		return entry;
 	}
-
-	public abstract KeyValue<T> readString(String line);
 
 	@Override
 	public void remove() {

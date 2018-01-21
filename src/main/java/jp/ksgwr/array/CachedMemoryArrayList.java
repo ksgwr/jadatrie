@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Collection;
 
-import jp.ksgwr.array.index.SeparatableIndex;
+import jp.ksgwr.array.index.SeparableIndex;
 
 /**
  * Cached Memory Array List (more speedy get and set)
@@ -183,7 +183,7 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	}
 
 	@Override
-	public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException {
+	public void load(SeparableIndex<T> index) throws IOException, ClassNotFoundException {
 		super.load(index);
 		this.initCache();
 	}

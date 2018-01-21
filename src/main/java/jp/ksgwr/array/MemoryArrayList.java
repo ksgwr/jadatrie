@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.ListIterator;
 
-import jp.ksgwr.array.index.SeparatableIndex;
+import jp.ksgwr.array.index.SeparableIndex;
 
 /**
  * Memory Array List
@@ -216,7 +216,7 @@ public class MemoryArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException {
+	public void load(SeparableIndex<T> index) throws IOException, ClassNotFoundException {
 		// copy all values
 		T[] val = (T[]) Array.newInstance(target, index.getItemSize());
 		IndexIterator<T> iterator = new IndexIterator<T>(target, index, defaultValue);

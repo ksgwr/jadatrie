@@ -8,7 +8,7 @@ import jp.ksgwr.jadatrie.core.KeyValue;
 
 public class DoubleArrayIterator<T> implements Iterator<Entry<String, T>>{
 
-	private Class<T> target;
+	private final Class<T> target;
 	private String[] key;
 	private T[] val;
 	private int i;

@@ -8,8 +8,8 @@ import jp.ksgwr.jadatrie.core.KeyValue;
 
 public class DoubleListIterator<T> implements Iterator<Entry<String, T>>{
 
-	Iterator<String> key;
-	Iterator<T> val;
+	private final Iterator<String> key;
+	private final Iterator<T> val;
 
 	public DoubleListIterator(List<String> key, List<T> val) {
 		this.key = key.iterator();

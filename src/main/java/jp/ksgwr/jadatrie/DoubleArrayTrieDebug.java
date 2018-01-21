@@ -40,7 +40,7 @@ public class DoubleArrayTrieDebug {
 			return "Node[c:" + code + "("+(char)(code-1)+")," + ",d:" + depth + ",l:" + left
 					+ ",r:" + right + "]";
 		}
-	};
+	}
 
 	private int check[];
 	private int base[];

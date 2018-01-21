@@ -6,26 +6,26 @@ import java.util.Map.Entry;
 
 import jp.ksgwr.jadatrie.core.KeyValue;
 
-public class KeyListIterator implements Iterator<Entry<String, Boolean>>{
+public class KeyListIterator implements Iterator<Entry<String, Boolean>> {
 
-	private Iterator<String> ite;
+    private final Iterator<String> ite;
 
-	public KeyListIterator(List<String> key) {
-		this.ite = key.iterator();
-	}
+    public KeyListIterator(List<String> key) {
+        this.ite = key.iterator();
+    }
 
-	@Override
-	public boolean hasNext() {
-		return ite.hasNext();
-	}
+    @Override
+    public boolean hasNext() {
+        return ite.hasNext();
+    }
 
-	@Override
-	public Entry<String, Boolean> next() {
-		return new KeyValue<Boolean>(ite.next(), Boolean.TRUE);
-	}
+    @Override
+    public Entry<String, Boolean> next() {
+        return new KeyValue<Boolean>(ite.next(), Boolean.TRUE);
+    }
 
-	@Override
-	public void remove() {
-		ite.remove();
-	}
+    @Override
+    public void remove() {
+        ite.remove();
+    }
 }

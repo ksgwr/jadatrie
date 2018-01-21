@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ListIterator;
 
-import jp.ksgwr.array.index.SeparatableIndex;
+import jp.ksgwr.array.index.SeparableIndex;
 
 /**
  * index iterator
@@ -16,10 +16,10 @@ import jp.ksgwr.array.index.SeparatableIndex;
 public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 
 	/** index instance */
-	private SeparatableIndex<T> index;
+	private final SeparableIndex<T> index;
 
 	/** target class */
-	private Class<T> target;
+	private final Class<T> target;
 
 	/** current index offset */
 	private int i;
@@ -31,19 +31,19 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	private int nextSegmentOffset;
 
 	/** size */
-	private int size;
+	private final int size;
 
 	/** current values */
 	private T[] vals;
 
-	private T defaultValue;
+	private final T defaultValue;
 
 	/**
 	 * constructor
 	 * @param target target class
 	 * @param index index
 	 */
-	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T defaultValue) {
+	public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue) {
 		this(target, index, defaultValue, null, 0);
 	}
 
@@ -54,7 +54,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	 * @param vals current vals
 	 * @param i index
 	 */
-	public IndexIterator(Class<T> target, SeparatableIndex<T> index, T defaultValue, T[] vals, int i) {
+	public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue, T[] vals, int i) {
 		this.index = index;
 		this.target = target;
 		this.defaultValue = defaultValue;

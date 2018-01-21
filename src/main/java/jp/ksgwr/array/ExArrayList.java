@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import jp.ksgwr.array.index.SeparatableIndex;
+import jp.ksgwr.array.index.SeparableIndex;
 
 /**
  * Extra Array List
@@ -69,7 +69,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	 * @param val item array
 	 * @return if true success.
 	 */
-	abstract public boolean addAll(int indedx, T[] val);
+	abstract public boolean addAll(int index, T[] val);
 
 	/**
 	 * load external index
@@ -77,14 +77,14 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	 * @throws IOException file error
 	 * @throws ClassNotFoundException target class error
 	 */
-	abstract public void load(SeparatableIndex<T> index) throws IOException, ClassNotFoundException;
+	abstract public void load(SeparableIndex<T> index) throws IOException, ClassNotFoundException;
 
 	/**
 	 * save index
 	 * @param index index
 	 * @throws IOException file error
 	 */
-	public void save(SeparatableIndex<T> index) throws IOException {
+	public void save(SeparableIndex<T> index) throws IOException {
 		index.save(this.iterator(), this.size(), target);
 	}
 
@@ -104,19 +104,19 @@ public abstract class ExArrayList<T extends Serializable> implements List<T> {
 	@Override
     public boolean remove(Object o) {
         if (o == null) {
-            for (int i = 0, size = size(); i < size; i++) {
-                if (get(i) == null) {
-                	// remove
-                    return true;
-                }
-            }
+			for (T t : this) {
+				if (t == null) {
+					// remove
+					return true;
+				}
+			}
         } else {
-        	for (int i = 0, size = size(); i < size; i++) {
-                if (o.equals(get(i))) {
-                	// remove
-                    return true;
-                }
-            }
+			for (T t : this) {
+				if (o.equals(t)) {
+					// remove
+					return true;
+				}
+			}
         }
         return false;
     }

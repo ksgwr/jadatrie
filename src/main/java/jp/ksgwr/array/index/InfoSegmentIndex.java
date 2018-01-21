@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Iterator;
 
-public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> implements SeparatableIndex<T> {
+public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> implements SeparableIndex<T> {
 
 	/** info file name */
 	private static final String INFO_FILENAME = "info";
@@ -34,15 +34,14 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	protected int segmentSize;
 
 	/** indexer */
-	protected InfoSegmentIndexer<T, Serializer, Deserializer> indexer;
+	protected final InfoSegmentIndexer<T, Serializer, Deserializer> indexer;
 
-	public InfoSegmentIndex(File directory, String prefix, InfoSegmentIndexer<T, Serializer, Deserializer> indexer) throws IOException {
+	public InfoSegmentIndex(File directory, String prefix, InfoSegmentIndexer<T, Serializer, Deserializer> indexer) {
 		this.directory = directory;
 		this.infoFile = new File(directory, prefix + INFO_FILENAME);
 		this.segPrefix = prefix + SEG_PREFIX;
 		this.segmentSize = 1;
 		this.indexer = indexer;
-		this.loadInfo();
 	}
 
 	protected File getSegmentFile(int segmentNum) {
@@ -59,12 +58,8 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 		indexer.serializeIntProp(serializer, this.allocateSize);
 	}
 
-	/**
-	 * load itemSize and segmentSize
-	 * @param infoFile
-	 * @throws IOException
-	 */
-	protected void loadInfo() throws IOException {
+	@Override
+	public void loadInfo() throws IOException {
 		Deserializer deserializer = null;
 		try {
 			deserializer = indexer.openDeserializer(infoFile, false);
@@ -220,20 +215,15 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 	}
 
 	@Override
-	public void cleanup() throws IOException {
+	public void cleanup() {
 		infoFile.delete();
-		for (File segFile : directory.listFiles(new FilenameFilter() {
-			@Override
-			public boolean accept(File dir, String name) {
-				return name.startsWith(segPrefix);
-			}
-		})) {
+		for (File segFile : directory.listFiles((dir, name) -> name.startsWith(segPrefix))) {
 			segFile.delete();
 		}
 	}
 
 	@Override
-	public void deleteSegment(int segmentNum) throws IOException {
+	public void deleteSegment(int segmentNum) {
 		this.getSegmentFile(segmentNum).delete();
 	}
 

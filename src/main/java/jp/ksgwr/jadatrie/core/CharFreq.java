@@ -2,7 +2,7 @@ package jp.ksgwr.jadatrie.core;
 
 public class CharFreq {
 
-	public int code;
+	public final int code;
 	public int count;
 
 	public CharFreq(int code) {

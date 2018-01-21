@@ -13,13 +13,13 @@ import java.util.ListIterator;
 public class ListArrayIterator<T> implements ListIterator<T> {
 
 	/** default value at null */
-	private T defaultValue;
+	private final T defaultValue;
 
 	/** list array */
-	private List<T[]> vals;
+	private final List<T[]> vals;
 
 	/** size */
-	private int size;
+	private final int size;
 
 	/** current index */
 	private int i;

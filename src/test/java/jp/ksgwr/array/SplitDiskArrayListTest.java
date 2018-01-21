@@ -11,9 +11,9 @@ import org.junit.Test;
 
 public class SplitDiskArrayListTest extends MemoryArrayTest {
 
-	protected File directory = new File("target", "splitDiskArrayTest");
+	protected final File directory = new File("target", "splitDiskArrayTest");
 
-	protected int separateSize = 10;
+	protected final int separateSize = 10;
 
 	@Override
 	protected ExArrayList<Integer> initExArrayList() throws Exception {

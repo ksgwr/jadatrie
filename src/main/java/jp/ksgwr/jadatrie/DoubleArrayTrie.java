@@ -28,7 +28,7 @@ import jp.ksgwr.jadatrie.core.Unit;
 
 public class DoubleArrayTrie<T extends Serializable> {
 
-	protected Class<T> target;
+	protected final Class<T> target;
 
 	protected ExArrayList<Unit> units;
 
@@ -609,7 +609,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     /**
      * baseがマイナス値のものを収集する
      * @param ids
-     * @param base
+     * @param nodePos
      */
 	protected final void collectId(List<Integer> ids, int nodePos) {
 		Unit unit = units.get(nodePos);
