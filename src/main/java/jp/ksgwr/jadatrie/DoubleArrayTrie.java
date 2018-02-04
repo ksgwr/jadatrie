@@ -49,11 +49,11 @@ public class DoubleArrayTrie<T extends Serializable> {
     private final Node tmpnode = new Node(0,0,0);
 
     public DoubleArrayTrie(Class<T> target) {
-    	this(target, new CachedMemoryArrayList<Unit>(Unit.class, 0));
+    	this(target, new CachedMemoryArrayList<>(Unit.class, 0));
     }
 
     public DoubleArrayTrie(Class<T> target, ExArrayList<Unit> units) {
-    	this(target, units, new CachedMemoryArrayList<Integer>(Integer.class, 0, Character.MAX_CODE_POINT, 1));
+    	this(target, units, new CachedMemoryArrayList<>(Integer.class, 0, Character.MAX_CODE_POINT, 1));
     }
 
     public DoubleArrayTrie(Class<T> target, ExArrayList<Unit> units, ExArrayList<Integer> codes) {
@@ -80,8 +80,8 @@ public class DoubleArrayTrie<T extends Serializable> {
 
     public void build(TreeMap<String, T> entries) {
     	int size = entries.size();
-    	this.keys = new CachedMemoryArrayList<String>(String.class, size, 1);
-		this.vals = new CachedMemoryArrayList<T>(target, size, 1);
+    	this.keys = new CachedMemoryArrayList<>(String.class, size, 1);
+		this.vals = new CachedMemoryArrayList<>(target, size, 1);
     	build(entries.entrySet().iterator(), size, true);
     }
 
@@ -92,22 +92,22 @@ public class DoubleArrayTrie<T extends Serializable> {
     }
 
     public void build(String[] key, T[] val) {
-    	this.keys = new CachedMemoryArrayList<String>(String.class, key, 1);
+    	this.keys = new CachedMemoryArrayList<>(String.class, key, 1);
     	if (val != null) {
-    		this.vals = new CachedMemoryArrayList<T>(target, val, 1);
+    		this.vals = new CachedMemoryArrayList<>(target, val, 1);
     	}
-    	build(new DoubleArrayIterator<T>(key, val), key.length, false);
+    	build(new DoubleArrayIterator<>(key, val), key.length, false);
     }
 
     public void build(List<String> key, List<T> val) {
     	this.setKeyValue(key, val);
-    	build(new DoubleListIterator<T>(key, val), key.size(), false);
+    	build(new DoubleListIterator<>(key, val), key.size(), false);
     }
 
 	protected void build(Iterator<Entry<String,T>> entries, int size, boolean requireInitKeyValue) {
     	// 文字列カウントと最初の文字が同じものでNodeの木構造を作成
     	CharFreq[] cfs = new CharFreq[Character.MAX_CODE_POINT];
-    	List<Node> siblings = new ArrayList<Node>(size);
+    	List<Node> siblings = new ArrayList<>(size);
     	if (entries.hasNext()) {
     		Entry<String, T> entry = entries.next();
     		String key = entry.getKey();
@@ -164,19 +164,16 @@ public class DoubleArrayTrie<T extends Serializable> {
     	}
 
     	// 文字とcodeの対応表を頻度によって作成する
-    	Arrays.sort(cfs, new Comparator<CharFreq>() {
-			@Override
-			public int compare(CharFreq o1, CharFreq o2) {
-				if (o1 == null && o2 == null) {
-					return 0;
-				} else if (o1 == null) {
-					return 1;
-				} else if (o2 == null) {
-					return -1;
-				}
-				return o2.count - o1.count;
-			}
-		});
+    	Arrays.sort(cfs, (o1, o2) -> {
+            if (o1 == null && o2 == null) {
+                return 0;
+            } else if (o1 == null) {
+                return 1;
+            } else if (o2 == null) {
+                return -1;
+            }
+            return o2.count - o1.count;
+        });
     	this.codes.clear();
     	int num = 1;
 		for (CharFreq cf : cfs) {
@@ -186,6 +183,7 @@ public class DoubleArrayTrie<T extends Serializable> {
 			this.codes.set(cf.code, num++);
 		}
 		this.codeLength = num;
+		// set null for memory save
 		cfs = null;
 		for (Node node : siblings) {
 			node.code = codes.get(node.code);
@@ -202,9 +200,12 @@ public class DoubleArrayTrie<T extends Serializable> {
     	units.set(0,  new Unit(1, 0));
 
     	this.currentPos = 0;
-    	insert(siblings, 0);
+        insert(siblings, 0);
 
-    	units.compress();
+    	int compressSize = units.compress();
+    	if (debugger != null) {
+			debugger.compressSize(compressSize);
+		}
     }
 
     private void fetch(EfficientNodeList newSiblings, Node root, int depth) {
@@ -262,7 +263,12 @@ public class DoubleArrayTrie<T extends Serializable> {
     	loop: while(true) {
     		currentPos++;
     		if (units.size() <= currentPos + maxCode) {
-    			units.resize(units.size() + currentPos + maxCode + keys.size() - siblings.get(siblings.size() - 1).right);
+    			int currentSize = units.size();
+    			int expandSize = currentPos + maxCode + 1 + keys.size() - siblings.get(siblings.size() - 1).right;
+    			if (debugger != null) {
+    				debugger.resize(siblings, depth, currentPos, maxCode, currentSize, expandSize);
+				}
+    			units.resize(expandSize);
     		}
     		for (Node node:siblings) {
     			Unit unit = units.get(currentPos + node.code);
@@ -273,20 +279,16 @@ public class DoubleArrayTrie<T extends Serializable> {
     		break;
     	}
     	int base = currentPos;
-    	if (base == 18897452) {
-    		System.out.println("test");
-    	}
     	for (Node node:siblings) {
     		units.set(base + node.code, new Unit(0, base));
     	}
+		if (debugger != null) {
+			debugger.findBase(siblings, depth, base);
+		}
 
-    	int count = 0;
     	int newDepth = depth + 1;
     	EfficientNodeList newSiblings = new EfficientNodeList();
     	for (Node node:siblings) {
-    		if (newDepth == 1) {
-    			System.out.println(count++ + ":" + System.currentTimeMillis());
-    		}
     		// 子のリストのオブジェクトは可能な限り使い回す
     		fetch(newSiblings, node, newDepth);
     		int i = base + node.code;
@@ -309,12 +311,12 @@ public class DoubleArrayTrie<T extends Serializable> {
     }
 
     public SearchResult commonPrefixSearch(String target, int start, int end, int nodePos) {
-    	List<Integer> results = new ArrayList<Integer>();
+    	List<Integer> results = new ArrayList<>();
 
     	Unit unit;
     	int base = units.get(nodePos).base;
     	int next;
-    	int i = start;
+    	int i;
 		for (i = start; i < end; i++) {
 			unit = units.get(base);
     		// check end of string
@@ -346,7 +348,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     }
 
     public SearchResult exactMatch(String target, int start, int end, int nodePos) {
-    	List<Integer> results = new ArrayList<Integer>();
+    	List<Integer> results = new ArrayList<>();
 
     	Unit unit;
     	int base = units.get(nodePos).base;
@@ -398,11 +400,12 @@ public class DoubleArrayTrie<T extends Serializable> {
      * @return
      */
     public SearchResult exactSpellerMatch(String target, int maxDist, boolean canAdd, boolean canDelete, boolean canReplace, int start, int end, int nodePos) {
-    	List<Integer> results = new ArrayList<Integer>();
+    	List<Integer> results = new ArrayList<>();
 
     	boolean isCheck = true;
-    	Unit unit, tmpUnit = null;
-    	int base = units.get(nodePos).base, tmpBase;
+    	Unit unit;
+        Unit tmpUnit;
+        int base = units.get(nodePos).base, tmpBase;
     	int next, tmpNext;
     	int i, c, tmpc;
     	for (i = start; i < end; i++) {
@@ -589,12 +592,12 @@ public class DoubleArrayTrie<T extends Serializable> {
 
     public List<Integer> predictiveSearch(String target, int start, int end, int nodePos) {
     	SearchResult result = exactMatch(target, start, end, nodePos);
-    	List<Integer> ids = new ArrayList<Integer>();
+    	List<Integer> ids = new ArrayList<>();
     	if (result.i != end) {
     		// 末端ノードに到達していない
     		return ids;
     	}
-    	ArrayDeque<Integer> queue = new ArrayDeque<Integer>();
+    	ArrayDeque<Integer> queue = new ArrayDeque<>();
     	queue.add(result.base);
 
 		while (!queue.isEmpty()) {
@@ -662,7 +665,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     			return -1;
     		}
     	}
-    	if ((unit = units.get(base)) != null && (next = unit.base) < 0) {
+    	if ((unit = units.get(base)) != null && unit.base < 0) {
     		return base;
     	}
     	return i;
@@ -742,7 +745,7 @@ public class DoubleArrayTrie<T extends Serializable> {
 					new FileInputStream(file)));
 
 			int len = is.readInt();
-			this.units = new CachedMemoryArrayList<Unit>(Unit.class, len);
+			this.units = new CachedMemoryArrayList<>(Unit.class, len);
 			for (int i=0;i<len;i++) {
 				boolean b = is.readBoolean();
 				if (b) {
@@ -752,7 +755,7 @@ public class DoubleArrayTrie<T extends Serializable> {
 				}
 			}
 			len = is.readInt();
-			this.codes = new CachedMemoryArrayList<Integer>(Integer.class, len);
+			this.codes = new CachedMemoryArrayList<>(Integer.class, len);
 			this.codeLength = is.readInt();
 			len = this.codeLength - 1;
 			for (int i=0;i<len;i++) {
@@ -767,7 +770,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     }
 
     public void setKeyValue(Iterator<Entry<String,T>> entries, int size) {
-    	this.setKeyValue(entries, size, new CachedMemoryArrayList<String>(String.class, size, 1), new CachedMemoryArrayList<T>(target, size, 1));
+    	this.setKeyValue(entries, size, new CachedMemoryArrayList<>(String.class, size, 1), new CachedMemoryArrayList<>(target, size, 1));
     }
 
 	public void setKeyValue(Iterator<Entry<String,T>> entries, int size, ExArrayList<String> emptyKeys, ExArrayList<T> emptyVals) {
@@ -788,8 +791,8 @@ public class DoubleArrayTrie<T extends Serializable> {
 	}
 
     public void setKeyValue(String[] keys, T[] vals) {
-    	List<T> valList = vals == null ? null : new CachedMemoryArrayList<T>(target, vals, 1);
-    	this.setKeyValue(new CachedMemoryArrayList<String>(String.class, keys, 1), valList);
+    	List<T> valList = vals == null ? null : new CachedMemoryArrayList<>(target, vals, 1);
+    	this.setKeyValue(new CachedMemoryArrayList<>(String.class, keys, 1), valList);
     }
 
     public void close() throws IOException {
