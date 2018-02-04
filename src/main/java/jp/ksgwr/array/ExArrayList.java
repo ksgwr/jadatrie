@@ -17,20 +17,20 @@ import jp.ksgwr.array.index.SeparableIndex;
  *
  * @author ksgwr
  *
- * @param <T> item class
+ * @param <E> item class
  */
-public abstract class ExArrayList<T extends Serializable> implements List<T>, AutoCloseable {
+public abstract class ExArrayList<E extends Serializable> implements List<E>, AutoCloseable {
 
 	/** item target class */
-	protected final Class<T> target;
+	protected final Class<E> target;
 
-	protected final T defaultValue;
+	protected final E defaultValue;
 
 	/**
 	 * constructor
 	 * @param target target class
 	 */
-	protected ExArrayList(Class<T> target) {
+	protected ExArrayList(Class<E> target) {
 		this.target = target;
 		this.defaultValue = null;
 	}
@@ -39,7 +39,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T>, Au
 	 * constructor
 	 * @param target target class
 	 */
-	protected ExArrayList(Class<T> target, T defaultValue) {
+	protected ExArrayList(Class<E> target, E defaultValue) {
 		this.target = target;
 		this.defaultValue = defaultValue;
 	}
@@ -53,15 +53,16 @@ public abstract class ExArrayList<T extends Serializable> implements List<T>, Au
 	/**
 	 * compress capacity, free unuse space
 	 * should call on only get use case.
+	 * @return compress size
 	 */
-	abstract public void compress();
+	abstract public int compress();
 
 	/**
 	 * add all item array
 	 * @param val item array
 	 * @return if true success.
 	 */
-	abstract public boolean addAll(T[] val);
+	abstract public boolean addAll(E[] val);
 
 	/**
 	 * add all item array
@@ -69,7 +70,7 @@ public abstract class ExArrayList<T extends Serializable> implements List<T>, Au
 	 * @param val item array
 	 * @return if true success.
 	 */
-	abstract public boolean addAll(int index, T[] val);
+	abstract public boolean addAll(int index, E[] val);
 
 	/**
 	 * load external index
@@ -77,14 +78,14 @@ public abstract class ExArrayList<T extends Serializable> implements List<T>, Au
 	 * @throws IOException file error
 	 * @throws ClassNotFoundException target class error
 	 */
-	abstract public void load(SeparableIndex<T> index) throws IOException, ClassNotFoundException;
+	abstract public void load(SeparableIndex<E> index) throws IOException, ClassNotFoundException;
 
 	/**
 	 * save index
 	 * @param index index
 	 * @throws IOException file error
 	 */
-	public void save(SeparableIndex<T> index) throws IOException {
+	public void save(SeparableIndex<E> index) throws IOException {
 		index.save(this.iterator(), this.size(), target);
 	}
 
@@ -101,15 +102,15 @@ public abstract class ExArrayList<T extends Serializable> implements List<T>, Au
 	@Override
     public boolean remove(Object o) {
         if (o == null) {
-			for (T t : this) {
-				if (t == null) {
+			for (E e : this) {
+				if (e == null) {
 					// remove
 					return true;
 				}
 			}
         } else {
-			for (T t : this) {
-				if (o.equals(t)) {
+			for (E e : this) {
+				if (o.equals(e)) {
 					// remove
 					return true;
 				}
@@ -170,8 +171,8 @@ public abstract class ExArrayList<T extends Serializable> implements List<T>, Au
 	}
 
 	@Override
-	public List<T> subList(int fromIndex, int toIndex) {
-		List<T> subList = new ArrayList<T>(toIndex - fromIndex);
+	public List<E> subList(int fromIndex, int toIndex) {
+		List<E> subList = new ArrayList<>(toIndex - fromIndex);
 		for (int i = fromIndex; i <= toIndex; i++) {
 			subList.add(this.get(i));
 		}

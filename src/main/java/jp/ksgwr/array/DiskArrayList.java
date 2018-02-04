@@ -20,20 +20,20 @@ import jp.ksgwr.array.index.SeparableIndex;
  *
  * @author kohei
  *
- * @param <T>
+ * @param <E>
  */
-public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
+public class DiskArrayList<E extends Serializable> extends ExArrayList<E> {
 
-	private SeparableIndex<T> index;
+	private SeparableIndex<E> index;
 
-	private T[] cacheVals;
+	private E[] cacheVals;
 
 	private int cacheOffset;
 
 	private int cacheSegmentNum;
 
 	// 境界値付近の場合を備えて1つ前をcacheする
-	private T[] secondCacheVals;
+	private E[] secondCacheVals;
 
 	private int secondCacheOffset;
 
@@ -49,20 +49,20 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	private boolean isUpdatedInfo;
 
-	public DiskArrayList(Class<T> target, File directory, int size) throws IOException {
+	public DiskArrayList(Class<E> target, File directory, int size) {
 		this(target, new InfoSegmentIndex<>(directory, "", new ObjectStreamIndexer<>()), size);
 	}
 
-	public DiskArrayList(Class<T> target, File directory, int size, int separateSize) throws IOException {
+	public DiskArrayList(Class<E> target, File directory, int size, int separateSize) {
 		this(target, new InfoFixSeparateSegmentIndex<>(directory, "", separateSize, new ObjectStreamIndexer<>()), size);
 	}
 
-	public DiskArrayList(Class<T> target, SeparableIndex<T> index, int size) {
+	public DiskArrayList(Class<E> target, SeparableIndex<E> index, int size) {
 		this(target, null, index, size);
 	}
 
 	@SuppressWarnings("unchecked")
-	public DiskArrayList(Class<T> target, T defaultValue, SeparableIndex<T> index, int size) {
+	public DiskArrayList(Class<E> target, E defaultValue, SeparableIndex<E> index, int size) {
 		super(target, defaultValue);
 		this.secondCacheVals = null;
 		this.secondSegmentNum = -1;
@@ -75,16 +75,16 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			index.cleanup();
 			increaseSize(size);
 			int valSize = index.getItemPerSegmentSize(cacheSegmentNum);
-			this.cacheVals = (T[]) Array.newInstance(target, valSize);
+			this.cacheVals = (E[]) Array.newInstance(target, valSize);
 			this.segmentSize = index.getSegmentSize();
 		}
 	}
 
-	public DiskArrayList(Class<T> target, SeparableIndex<T> index) throws IOException, ClassNotFoundException {
+	public DiskArrayList(Class<E> target, SeparableIndex<E> index) throws IOException, ClassNotFoundException {
 		this(target, null, index);
 	}
 
-	public DiskArrayList(Class<T> target, T defaultValue, SeparableIndex<T> index) throws IOException, ClassNotFoundException {
+	public DiskArrayList(Class<E> target, E defaultValue, SeparableIndex<E> index) throws IOException, ClassNotFoundException {
 		super(target, defaultValue);
 		this.secondCacheVals = null;
 		this.secondSegmentNum = -1;
@@ -152,7 +152,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		}
 	}
 
-	private void saveSegment(int segmentNum, T[] vals, Integer offset) throws IOException {
+	private void saveSegment(int segmentNum, E[] vals, Integer offset) throws IOException {
 		if (segmentNum == this.segmentSize - 1) {
 			// 最後のsegmentはsize分のみを保存する
 			if (offset == null) {
@@ -175,7 +175,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				// swap cache
 				int tmpSegmentNum = this.cacheSegmentNum;
 				int tmpOffset = this.cacheOffset;
-				T[] tmpVal = this.cacheVals;
+				E[] tmpVal = this.cacheVals;
 				boolean tmpIsUpdatedCache = this.isUpdatedCache;
 
 				this.cacheSegmentNum = this.secondSegmentNum;
@@ -215,8 +215,8 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	@Override
-	public T get(int i) {
-		T v;
+	public E get(int i) {
+		E v;
 		try {
 			v = cacheVals[i - cacheOffset];
 		} catch (NullPointerException e) {
@@ -224,13 +224,18 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			v = cacheVals[i - cacheOffset];
 		} catch (ArrayIndexOutOfBoundsException e) {
 			loadCacheOrNewSegment(i);
-			v = cacheVals[i - cacheOffset];
+			try {
+				v = cacheVals[i - cacheOffset];
+			} catch (ArrayIndexOutOfBoundsException e2) {
+				e2.printStackTrace();
+				v = null;
+			}
 		}
 		return v == null ? defaultValue : v;
 	}
 
 	@Override
-	public T set(int i, T t) {
+	public E set(int i, E t) {
 		try {
 			// TODO: 未使用領域にアクセスする可能性があるのでoffsetチェックを行った方が良い
 			cacheVals[i - cacheOffset] = t;
@@ -239,31 +244,33 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			cacheVals[i - cacheOffset] = t;
 		} catch (ArrayIndexOutOfBoundsException e) {
 			loadCacheOrNewSegment(i);
-			cacheVals[i - cacheOffset] = t;
+			try {
+				cacheVals[i - cacheOffset] = t;
+			} catch (ArrayIndexOutOfBoundsException e2) {
+				e2.printStackTrace();
+			}
 		}
 		isUpdatedCache = true;
 		return t;
 	}
 
-	private IndexIterator<T> createIndexIterator(int i) {
-		Map<Integer, T[]> cacheSegment = new TreeMap<Integer, T[]>();
+	private IndexIterator<E> createIndexIterator(int i) {
+		Map<Integer, E[]> cacheSegment = new TreeMap<>();
 		if (this.cacheVals != null) {
 			cacheSegment.put(this.cacheSegmentNum, this.cacheVals);
 		}
 		if (this.secondCacheVals != null) {
 			cacheSegment.put(this.secondSegmentNum, this.secondCacheVals);
 		}
-		IndexIterator<T> iterator = new IndexIterator<>(target, index, defaultValue, i, cacheSegment);
-
-		return iterator;
+		return new IndexIterator<>(target, index, defaultValue, i, cacheSegment);
 	}
 
 	@Override
-	public Iterator<T> iterator() {
+	public Iterator<E> iterator() {
 		return createIndexIterator(0);
 	}
 
-	private T[] getSegmentBySegmentNumber(int segmentNum) throws ClassNotFoundException, IOException {
+	private E[] getSegmentBySegmentNumber(int segmentNum) {
 		if (this.cacheSegmentNum == segmentNum) {
 			return this.cacheVals;
 		} else {
@@ -272,15 +279,16 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void updateCacheValSize() {
-		T[] tmpVal;
+		E[] tmpVal;
 		int newSize;
 		int copyLength;
 		if (this.cacheVals != null) {
 			// update cache size
 			newSize = index.getItemPerSegmentSize(cacheSegmentNum);
 			if (newSize != cacheVals.length) {
-				tmpVal = (T[]) Array.newInstance(target, newSize);
+				tmpVal = (E[]) Array.newInstance(target, newSize);
 				copyLength = Math.min(newSize, cacheVals.length);
 				if (copyLength > 0) {
 					System.arraycopy(cacheVals, 0, tmpVal, 0, copyLength);
@@ -291,7 +299,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		if (this.secondCacheVals != null) {
 			newSize = index.getItemPerSegmentSize(secondSegmentNum);
 			if (newSize != secondCacheVals.length) {
-				tmpVal = (T[]) Array.newInstance(target, newSize);
+				tmpVal = (E[]) Array.newInstance(target, newSize);
 				copyLength = Math.min(newSize, secondCacheVals.length);
 				if (copyLength > 0) {
 					System.arraycopy(secondCacheVals, 0, tmpVal, 0, Math.min(secondCacheVals.length, tmpVal.length));
@@ -313,6 +321,8 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			}
 			updateCacheValSize();
 		} else if (size < this.size) {
+			int tmpSegmentNum = this.segmentSize - 1;
+
 			decreaseSize(size);
 			decreaseAllocateSize(size);
 
@@ -329,7 +339,6 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			}
 
 			// delete unuse segment
-			int tmpSegmentNum = this.segmentSize - 1;
 			while (tmpSegmentNum >= this.segmentSize) {
 				index.deleteSegment(tmpSegmentNum--);
 			}
@@ -348,54 +357,49 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	@Override
-	public void compress() {
-		try {
-			int lastSegmentNum = this.segmentSize - 1;
-			int lastOffset = index.getOffset(lastSegmentNum);
-			T[] lastVal = getSegmentBySegmentNumber(lastSegmentNum);
-			int i = size - 1;
+	public int compress() {
+		int oldSize = size;
+		int lastSegmentNum = this.segmentSize - 1;
+		int lastOffset = index.getOffset(lastSegmentNum);
+		E[] lastVal = getSegmentBySegmentNumber(lastSegmentNum);
+		int i = size - 1;
 
-			int valIndex = -1;
-			while (i >= 0) {
-				valIndex = i - lastOffset;
-				while(valIndex >= 0 && lastVal[valIndex] == null) {
-					valIndex--;
-					i--;
-				}
-				if (valIndex < 0) {
-					index.deleteSegment(lastSegmentNum);
-					lastSegmentNum--;
-					lastVal = getSegmentBySegmentNumber(lastSegmentNum);
-					lastOffset = index.getOffset(lastSegmentNum);
+		int valIndex = -1;
+		while (i >= 0) {
+			valIndex = i - lastOffset;
+			while(valIndex >= 0 && lastVal[valIndex] == null) {
+				valIndex--;
+				i--;
+			}
+			if (valIndex < 0) {
+				index.deleteSegment(lastSegmentNum);
+				lastSegmentNum--;
+				lastVal = getSegmentBySegmentNumber(lastSegmentNum);
+				lastOffset = index.getOffset(lastSegmentNum);
 
-					if (lastSegmentNum < this.cacheSegmentNum) {
-						this.cacheSegmentNum = -1;
-						this.cacheVals = null;
-					}
-					if (lastSegmentNum < this.secondSegmentNum) {
-						this.secondSegmentNum = -1;
-						this.secondCacheVals = null;
-					}
-				} else {
-					break;
+				if (lastSegmentNum < this.cacheSegmentNum) {
+					this.cacheSegmentNum = -1;
+					this.cacheVals = null;
 				}
-			}
-			i++;
-			if (0 <= valIndex && valIndex < lastVal.length - 1 && i != size) {
-				if (this.cacheSegmentNum == lastSegmentNum) {
-					this.isUpdatedCache = true;
-				} else if(this.secondSegmentNum == lastSegmentNum) {
-					this.isUpdatedSecondCache = true;
+				if (lastSegmentNum < this.secondSegmentNum) {
+					this.secondSegmentNum = -1;
+					this.secondCacheVals = null;
 				}
-				decreaseSize(i);
-				decreaseAllocateSize(i);
+			} else {
+				break;
 			}
-		} catch (ClassNotFoundException e) {
-			throw new DiskArrayListClassNotFoundException(e);
-		} catch (IOException e) {
-			throw new DiskArrayListIOException(e);
 		}
-
+		i++;
+		if (0 <= valIndex && valIndex < lastVal.length - 1 && i != size) {
+			if (this.cacheSegmentNum == lastSegmentNum) {
+				this.isUpdatedCache = true;
+			} else if(this.secondSegmentNum == lastSegmentNum) {
+				this.isUpdatedSecondCache = true;
+			}
+			decreaseSize(i);
+			decreaseAllocateSize(i);
+		}
+		return oldSize - size;
 	}
 
 	@Override
@@ -405,7 +409,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void load(SeparableIndex<T> index) throws IOException, ClassNotFoundException {
+	public void load(SeparableIndex<E> index) throws IOException, ClassNotFoundException {
 		// 全部のindexが保存されていないのでバグあり
 
 		this.secondSegmentNum = -1;
@@ -421,14 +425,14 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			decreaseSize(size);
 		}
 
-		IndexIterator<T> iterator = new IndexIterator<>(target, index, defaultValue);
+		IndexIterator<E> iterator = new IndexIterator<>(target, index, defaultValue);
 		if (this.segmentSize > 1) {
 			this.index.save(iterator, size, target);
 			this.cacheVals = this.index.loadSegment(this.cacheSegmentNum, target);
 			this.isUpdatedCache = false;
 		} else {
 			// load cache only, not save at time
-			this.cacheVals = (T[]) Array.newInstance(target, index.getItemPerSegmentSize(cacheSegmentNum));
+			this.cacheVals = (E[]) Array.newInstance(target, index.getItemPerSegmentSize(cacheSegmentNum));
 			while (iterator.hasNext()) {
 				this.cacheVals[iterator.index()] = iterator.next();
 			}
@@ -439,8 +443,8 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object[] toArray() {
-		T[] obj = (T[]) Array.newInstance(target, size);
-		Iterator<T> ite = this.iterator();
+		E[] obj = (E[]) Array.newInstance(target, size);
+		Iterator<E> ite = this.iterator();
 		int i = 0;
 		while (ite.hasNext()) {
 			obj[i++] = ite.next();
@@ -448,13 +452,13 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		return obj;
 	}
 
-	private void prepareAddition() throws IOException, ClassNotFoundException {
+	private void prepareAddition() {
 		int oldSize = size;
 		int oldSegmentSize = segmentSize;
 		// 仮でサイズを更新してsegmentSizeの変化を見る
 		increaseSize(size + 1);
 		if (oldSegmentSize == segmentSize) {
-			T[] vals = getSegmentBySegmentNumber(segmentSize - 1);
+			E[] vals = getSegmentBySegmentNumber(segmentSize - 1);
 			if (vals.length == oldSize - this.cacheOffset) {
 				// 最後のoffsetの場合、効率化のために余分にサイズを拡大
 				increaseAllocateSize(oldSize + vals.length);
@@ -474,21 +478,15 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	@Override
-	public boolean add(T t) {
-		try {
-			int oldSize = size;
-			prepareAddition();
-			this.set(oldSize, t);
-		} catch (ClassNotFoundException e) {
-			throw new DiskArrayListClassNotFoundException(e);
-		} catch (IOException e) {
-			throw new DiskArrayListIOException(e);
-		}
+	public boolean add(E t) {
+		int oldSize = size;
+		prepareAddition();
+		this.set(oldSize, t);
 		return true;
 	}
 
 	@Override
-	public void add(int i, T element) {
+	public void add(int i, E element) {
 		if (i == size) {
 			add(element);
 		} else if(i < 0 && size < i) {
@@ -497,12 +495,12 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 			try {
 				prepareAddition();
 				// lastVal
-				T[] tmpVals = this.cacheVals;
+				E[] tmpVals = this.cacheVals;
 				int tmpSegmentNum = this.cacheSegmentNum;
 
 				int tmpi;
 				while ((tmpi = i - this.cacheOffset) < 0) {
-					T[] targetVals = tmpVals;
+					E[] targetVals = tmpVals;
 					System.arraycopy(tmpVals, 0, tmpVals, 1, tmpVals.length - 1);
 					tmpSegmentNum--;
 					tmpVals = getSegmentBySegmentNumber(tmpSegmentNum);
@@ -515,27 +513,25 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				this.isUpdatedCache = true;
 			} catch (IOException e) {
 				throw new DiskArrayListIOException(e);
-			} catch (ClassNotFoundException e) {
-				throw new DiskArrayListClassNotFoundException(e);
 			}
 		}
 	}
 
 	@Override
-	public T remove(int i) {
-		T ret;
+	public E remove(int i) {
+		E ret;
 		if (i < 0 && size <= i) {
 			throw new ArrayIndexOutOfBoundsException(i);
 		} else {
 			try {
 				int tmpSegmentNum = this.segmentSize - 1;
-				T[] tmpVal = getSegmentBySegmentNumber(tmpSegmentNum);
-				T tmpItem = null;
+				E[] tmpVal = getSegmentBySegmentNumber(tmpSegmentNum);
+				E tmpItem = null;
 				int lastIndex;
 				int tmpi;
 				while ((tmpi = i - this.cacheOffset) < 0) {
 					lastIndex = tmpVal.length - 1;
-					T firstItem = tmpVal[0];
+					E firstItem = tmpVal[0];
 					System.arraycopy(tmpVal, 1, tmpVal, 0, lastIndex);
 					tmpVal[lastIndex] = tmpItem;
 					tmpItem = firstItem;
@@ -552,52 +548,50 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				this.isUpdatedCache = true;
 			} catch (IOException e) {
 				throw new DiskArrayListIOException(e);
-			} catch (ClassNotFoundException e) {
-				throw new DiskArrayListClassNotFoundException(e);
 			}
 		}
 		return ret;
 	}
 
 	@Override
-	public boolean addAll(Collection<? extends T> c) {
-		for (T item : c) {
+	public boolean addAll(Collection<? extends E> c) {
+		for (E item : c) {
 			add(item);
 		}
 		return true;
 	}
 
 	@Override
-	public boolean addAll(int index, Collection<? extends T> c) {
+	public boolean addAll(int index, Collection<? extends E> c) {
 		int mvSize = size - index;
 		int colSize = c.size();
 		this.resize(size + colSize);
 		for (int i = 0, j = size - 1; i < mvSize; i++, j--) {
 			this.set(j, get(j - colSize));
 		}
-		for (T item : c) {
+		for (E item : c) {
 			this.set(index++, item);
 		}
 		return true;
 	}
 
 	@Override
-	public boolean addAll(T[] val) {
-		for (T item : val) {
+	public boolean addAll(E[] val) {
+		for (E item : val) {
 			add(item);
 		}
 		return true;
 	}
 
 	@Override
-	public boolean addAll(int index, T[] val) {
+	public boolean addAll(int index, E[] val) {
 		int mvSize = size - index;
 		int colSize = val.length;
 		this.resize(size + colSize);
 		for (int i = 0, j = size - 1; i < mvSize; i++, j--) {
 			this.set(j, get(j - colSize));
 		}
-		for (T item : val) {
+		for (E item : val) {
 			this.set(index++, item);
 		}
 		return true;
@@ -617,7 +611,7 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 		int w = 0;
 		boolean modified = false;
 		for (int i = 0; i < size; i++) {
-			T val = this.get(i);
+			E val = this.get(i);
 			if (c.contains(val) == complement) {
 				this.set(w++, val);
 			}
@@ -647,11 +641,11 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 				this.cacheSegmentNum = 0;
 				this.cacheOffset = 0;
 				int valSize = index.getItemPerSegmentSize(cacheSegmentNum);
-				this.cacheVals = (T[]) Array.newInstance(target, valSize);
+				this.cacheVals = (E[]) Array.newInstance(target, valSize);
 				index.saveSegment(cacheSegmentNum, cacheVals, 0);
 				for (int i = 1; i < segmentSize; i++) {
 					valSize = index.getItemPerSegmentSize(i);
-					T[] val = (T[]) Array.newInstance(target, valSize);
+					E[] val = (E[]) Array.newInstance(target, valSize);
 					index.saveSegment(i, val, 0);
 				}
 			} catch (IOException e) {
@@ -671,17 +665,17 @@ public class DiskArrayList<T extends Serializable> extends ExArrayList<T> {
 	}
 
 	@Override
-	public ListIterator<T> listIterator() {
+	public ListIterator<E> listIterator() {
 		return createIndexIterator(0);
 	}
 
 	@Override
-	public ListIterator<T> listIterator(int index) {
+	public ListIterator<E> listIterator(int index) {
 		return createIndexIterator(index);
 	}
 
 	@Override
-	public List<T> subList(int fromIndex, int toIndex) {
+	public List<E> subList(int fromIndex, int toIndex) {
 		return super.subList(fromIndex, toIndex);
 	}
 

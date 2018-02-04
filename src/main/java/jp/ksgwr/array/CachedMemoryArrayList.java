@@ -177,9 +177,10 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	}
 
 	@Override
-	public void compress() {
-		super.compress();
+	public int compress() {
+		int compressSize = super.compress();
 		this.initCache();
+		return compressSize;
 	}
 
 	@Override

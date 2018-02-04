@@ -3,10 +3,7 @@ package jp.ksgwr.array;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 
 import org.junit.After;
 import org.junit.Before;
@@ -36,11 +33,11 @@ public class MemoryArrayTest {
 	}
 
 	protected ExArrayList<Integer> initExArrayList() throws Exception {
-		return new MemoryArrayList<Integer>(Integer.class, size);
+		return new MemoryArrayList<>(Integer.class, size);
 	}
 
 	protected ExArrayList<Integer> initExArrayListDefaultZero() throws Exception {
-		return new MemoryArrayList<Integer>(Integer.class, new Integer(0), size);
+		return new MemoryArrayList<>(Integer.class, new Integer(0), size);
 	}
 
 
@@ -104,8 +101,9 @@ public class MemoryArrayTest {
 		for (int i=15;i<20;i++) {
 			ary.set(i, null);
 		}
-		ary.compress();
+		int compressSize = ary.compress();
 
+		assertEquals(5, compressSize);
 		assertEquals(15, ary.size());
 
 		ary.resize(25);
@@ -150,7 +148,7 @@ public class MemoryArrayTest {
 
 		assertEquals(oldSize + 1, ary.size());
 		for (Integer i = 0; i < 15; i++) {
-			assertEquals(new Integer(i), ary.get(i));
+			assertEquals(i, ary.get(i));
 		}
 		assertEquals(newVal, ary.get(15));
 		for (Integer i = 16; i < ary.size(); i++) {
@@ -160,7 +158,7 @@ public class MemoryArrayTest {
 
 	@Test
 	public void addAllTest() {
-		List<Integer> newVals = Arrays.asList(new Integer[]{20, 21, 22, 23, 24});
+		List<Integer> newVals = Arrays.asList(20, 21, 22, 23, 24);
 
 		ary.addAll(newVals);
 
@@ -185,7 +183,7 @@ public class MemoryArrayTest {
 
 	@Test
 	public void addAllIndexTest() {
-		List<Integer> newVals = Arrays.asList(new Integer[]{-1, -2, -3, -4, -5});
+		List<Integer> newVals = Arrays.asList(-1, -2, -3, -4, -5);
 
 		ary.addAll(0, newVals);
 
@@ -219,7 +217,7 @@ public class MemoryArrayTest {
 	@Test
 	public void removeAllTest() {
 		// remove 0,5,10,15
-		List<Integer> removeCol = Arrays.asList(new Integer[]{20, 15, 10, 5, 0});
+		List<Integer> removeCol = Arrays.asList(20, 15, 10, 5, 0);
 
 		ary.removeAll(removeCol);
 
@@ -233,7 +231,7 @@ public class MemoryArrayTest {
 
 	@Test
 	public void retainAllTest() {
-		List<Integer> retainCol = Arrays.asList(new Integer[]{0, 5, 10, 15, 20});
+		List<Integer> retainCol = Arrays.asList(0, 5, 10, 15, 20);
 
 		ary.add(20);
 		ary.retainAll(retainCol);
@@ -265,7 +263,7 @@ public class MemoryArrayTest {
 
 		assertEquals(oldSize - 1, ary.size());
 		for (Integer i = 0; i < 15; i++) {
-			assertEquals(new Integer(i), ary.get(i));
+			assertEquals(i, ary.get(i));
 		}
 		for (Integer i = 15; i < ary.size(); i++) {
 			assertEquals(new Integer(i + 1), ary.get(i));
@@ -309,8 +307,8 @@ public class MemoryArrayTest {
 		assertEquals(0, ary.size());
 		ary.resize(10);
 		assertEquals(10, ary.size());
-		for (Integer i = 0; i < ary.size(); i++) {
-			assertNull(ary.get(i));
+		for (Integer i: ary) {
+			assertNull(i);
 		}
 	}
 
@@ -318,8 +316,8 @@ public class MemoryArrayTest {
 	public void getDefaultValueTest() throws Exception {
 		ary = initExArrayListDefaultZero();
 		assertEquals(size, ary.size());
-		for (Integer i = 0; i < ary.size(); i++) {
-			assertEquals(new Integer(0), ary.get(i));
+		for (Integer i: ary) {
+			assertEquals(new Integer(0), i);
 		}
 	}
 }
