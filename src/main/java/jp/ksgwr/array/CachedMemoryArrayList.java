@@ -1,36 +1,32 @@
 package jp.ksgwr.array;
 
-import java.io.IOException;
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Collection;
-
-import jp.ksgwr.array.index.SeparableIndex;
 
 /**
  * Cached Memory Array List (more speedy get and set)
  *
  * @author ksgwr
  *
- * @param <T> item class
+ * @param <E> item class
  */
-public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayList<T> {
+public class CachedMemoryArrayList<E> extends MemoryArrayList<E> {
 
 	/** array index */
-	private int valIndex;
+	protected int valIndex;
 
 	/** offset index */
-	private int offset;
+	protected int offset;
 
 	/** current value */
-	private T[] val;
+	protected E[] val;
 
 	/**
 	 * constructor
 	 * @param target target class
 	 * @param size initial array size
 	 */
-	public CachedMemoryArrayList(Class<T> target, int size) {
+	public CachedMemoryArrayList(Class<E> target, int size) {
 		this(target, null, size, 10);
 	}
 
@@ -39,13 +35,13 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	 * @param target target class
 	 * @param size initial array size
 	 */
-	public CachedMemoryArrayList(Class<T> target, T defaultValue, int size) {
+	public CachedMemoryArrayList(Class<E> target, E defaultValue, int size) {
 		this(target, defaultValue, size, 10);
 	}
 
 	@SuppressWarnings("unchecked")
-	public CachedMemoryArrayList(Class<T> target, int size, int resizeCapacity) {
-		this(target, null, (T[])Array.newInstance(target, size), resizeCapacity);
+	public CachedMemoryArrayList(Class<E> target, int size, int resizeCapacity) {
+		this(target, null, (E[])Array.newInstance(target, size), resizeCapacity);
 	}
 
 	/**
@@ -55,11 +51,11 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	 * @param resizeCapacity resize capacity size
 	 */
 	@SuppressWarnings("unchecked")
-	public CachedMemoryArrayList(Class<T> target, T defaultValue, int size, int resizeCapacity) {
-		this(target, defaultValue, (T[])Array.newInstance(target, size), resizeCapacity);
+	public CachedMemoryArrayList(Class<E> target, E defaultValue, int size, int resizeCapacity) {
+		this(target, defaultValue, (E[])Array.newInstance(target, size), resizeCapacity);
 	}
 
-	public CachedMemoryArrayList(Class<T> target, T[] val, int resizeCapacity) {
+	public CachedMemoryArrayList(Class<E> target, E[] val, int resizeCapacity) {
 		super(target, null, val, resizeCapacity);
 		initCache();
 	}
@@ -70,7 +66,7 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	 * @param val initial val array
 	 * @param resizeCapacity resize capacity size
 	 */
-	public CachedMemoryArrayList(Class<T> target, T defaultValue, T[] val, int resizeCapacity) {
+	public CachedMemoryArrayList(Class<E> target, E defaultValue, E[] val, int resizeCapacity) {
 		super(target, defaultValue, val, resizeCapacity);
 		initCache();
 	}
@@ -105,9 +101,9 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	}
 
 	@Override
-	public T get(int i) {
+	public E get(int i) {
 		int tmpi = i - offset;
-		T v;
+		E v;
 		try {
 			// TODO: 未使用領域にアクセスする可能性はある
 			v = val[tmpi];
@@ -119,7 +115,7 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	}
 
 	@Override
-	public T set(int i, T t) {
+	public E set(int i, E t) {
 		int tmpi = i - offset;
 		try {
 			return this.val[tmpi] = t;
@@ -130,14 +126,14 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 	}
 
 	@Override
-	public boolean addAll(int index, Collection<? extends T> c) {
+	public boolean addAll(int index, Collection<? extends E> c) {
 		boolean modified = super.addAll(index, c);
 		this.initCache();
 		return modified;
 	}
 
 	@Override
-	public boolean addAll(int index, T[] val) {
+	public boolean addAll(int index, E[] val) {
 		boolean modified = super.addAll(index, val);
 		this.initCache();
 		return modified;
@@ -181,12 +177,6 @@ public class CachedMemoryArrayList<T extends Serializable> extends MemoryArrayLi
 		int compressSize = super.compress();
 		this.initCache();
 		return compressSize;
-	}
-
-	@Override
-	public void load(SeparableIndex<T> index) throws IOException, ClassNotFoundException {
-		super.load(index);
-		this.initCache();
 	}
 
 	@Override

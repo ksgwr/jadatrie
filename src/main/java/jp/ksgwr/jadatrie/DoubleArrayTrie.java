@@ -18,22 +18,21 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import jp.ksgwr.array.CachedMemoryArrayList;
-import jp.ksgwr.array.ExArrayList;
+import jp.ksgwr.array.*;
 import jp.ksgwr.jadatrie.core.CharFreq;
 import jp.ksgwr.jadatrie.core.EfficientNodeList;
 import jp.ksgwr.jadatrie.core.Node;
 import jp.ksgwr.jadatrie.core.SearchResult;
 import jp.ksgwr.jadatrie.core.Unit;
 
-public class DoubleArrayTrie<T extends Serializable> {
+public class DoubleArrayTrie<T> {
 
 	protected final Class<T> target;
 
-	protected ExArrayList<Unit> units;
+	protected IndexableExArrayList<Unit> units;
 
 	// UTF-16だと圧縮率が悪い、頻度順にソートして高い頻度に低い番号をつけると圧縮率が良い
-	protected ExArrayList<Integer> codes;
+	protected IndexableExArrayList<Integer> codes;
 
 	protected int codeLength;
 
@@ -49,14 +48,14 @@ public class DoubleArrayTrie<T extends Serializable> {
     private final Node tmpnode = new Node(0,0,0);
 
     public DoubleArrayTrie(Class<T> target) {
-    	this(target, new CachedMemoryArrayList<>(Unit.class, 0));
+    	this(target, new IndexableCachedMemoryArrayList<>(Unit.class, 0));
     }
 
-    public DoubleArrayTrie(Class<T> target, ExArrayList<Unit> units) {
-    	this(target, units, new CachedMemoryArrayList<>(Integer.class, 0, Character.MAX_CODE_POINT, 1));
+    public DoubleArrayTrie(Class<T> target, IndexableExArrayList<Unit> units) {
+    	this(target, units, new IndexableCachedMemoryArrayList<>(Integer.class, 0, Character.MAX_CODE_POINT, 1));
     }
 
-    public DoubleArrayTrie(Class<T> target, ExArrayList<Unit> units, ExArrayList<Integer> codes) {
+    public DoubleArrayTrie(Class<T> target, IndexableExArrayList<Unit> units, IndexableExArrayList<Integer> codes) {
     	this.target = target;
     	this.units = units;
     	this.codes = codes;
@@ -745,7 +744,7 @@ public class DoubleArrayTrie<T extends Serializable> {
 					new FileInputStream(file)));
 
 			int len = is.readInt();
-			this.units = new CachedMemoryArrayList<>(Unit.class, len);
+			this.units = new IndexableCachedMemoryArrayList<>(Unit.class, len);
 			for (int i=0;i<len;i++) {
 				boolean b = is.readBoolean();
 				if (b) {
@@ -755,7 +754,7 @@ public class DoubleArrayTrie<T extends Serializable> {
 				}
 			}
 			len = is.readInt();
-			this.codes = new CachedMemoryArrayList<>(Integer.class, len);
+			this.codes = new IndexableCachedMemoryArrayList<>(Integer.class, len);
 			this.codeLength = is.readInt();
 			len = this.codeLength - 1;
 			for (int i=0;i<len;i++) {
@@ -770,7 +769,7 @@ public class DoubleArrayTrie<T extends Serializable> {
     }
 
     public void setKeyValue(Iterator<Entry<String,T>> entries, int size) {
-    	this.setKeyValue(entries, size, new CachedMemoryArrayList<>(String.class, size, 1), new CachedMemoryArrayList<>(target, size, 1));
+    	this.setKeyValue(entries, size, new CachedMemoryArrayList<String>(String.class, size, 1), new CachedMemoryArrayList<T>(target, size, 1));
     }
 
 	public void setKeyValue(Iterator<Entry<String,T>> entries, int size, ExArrayList<String> emptyKeys, ExArrayList<T> emptyVals) {

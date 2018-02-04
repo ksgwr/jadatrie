@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.TreeMap;
 
 import jp.ksgwr.array.index.SeparableIndex;
 
@@ -13,23 +12,23 @@ import jp.ksgwr.array.index.SeparableIndex;
  *
  * @author ksgwr
  *
- * @param <T>
+ * @param <E>
  */
-public class IndexIterator<T extends Serializable> implements ListIterator<T> {
+public class IndexIterator<E extends Serializable> implements ListIterator<E> {
 
 	/** index instance */
-	private final SeparableIndex<T> index;
+	private final SeparableIndex<E> index;
 
 	/** target class */
-	private final Class<T> target;
+	private final Class<E> target;
 
 	/** size */
 	private final int size;
 
 	/** default value in null */
-	private final T defaultValue;
+	private final E defaultValue;
 
-	private final Map<Integer, T[]> cacheSegment;
+	private final Map<Integer, E[]> cacheSegment;
 
 	/** current index offset */
 	private int i;
@@ -41,9 +40,9 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	private int nextSegmentOffset;
 
 	/** current values */
-	private T[] vals;
+	private E[] vals;
 
-    public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue) {
+    public IndexIterator(Class<E> target, SeparableIndex<E> index, E defaultValue) {
         this(target, index, defaultValue, 0, null);
     }
 
@@ -54,7 +53,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	 * @param index index
 	 * @param i index
 	 */
-	public IndexIterator(Class<T> target, SeparableIndex<T> index, T defaultValue, int i, Map<Integer, T[]> cacheSegment) {
+	public IndexIterator(Class<E> target, SeparableIndex<E> index, E defaultValue, int i, Map<Integer, E[]> cacheSegment) {
 		this.index = index;
 		this.target = target;
 		this.defaultValue = defaultValue;
@@ -68,8 +67,8 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 		this.vals = getSegment(segmentNum);
 	}
 
-	private T[] getSegment(int segmentNum) {
-        T[] vals = null;
+	private E[] getSegment(int segmentNum) {
+        E[] vals = null;
 	    if (cacheSegment != null) {
             vals = cacheSegment.get(segmentNum);
         }
@@ -91,7 +90,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	}
 
 	@Override
-	public T next() {
+	public E next() {
 		if (i == nextSegmentOffset) {
             this.vals = getSegment(++segmentNum);
             this.segmentOffset = this.nextSegmentOffset;
@@ -99,7 +98,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 		}
 		int tmpi = i - segmentOffset;
 		i++;
-		T tmpVal = vals[tmpi];
+		E tmpVal = vals[tmpi];
 		return tmpVal == null ? defaultValue : tmpVal;
 	}
 
@@ -122,7 +121,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	}
 
 	@Override
-	public T previous() {
+	public E previous() {
 		if (i < segmentOffset) {
             this.vals = getSegment(--segmentNum);
             this.nextSegmentOffset = this.segmentOffset;
@@ -130,7 +129,7 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 		}
 		int tmpi = i - segmentOffset;
 		i--;
-		T tmpVal = vals[tmpi];
+		E tmpVal = vals[tmpi];
 		return tmpVal == null ? defaultValue : tmpVal;
 	}
 
@@ -145,12 +144,12 @@ public class IndexIterator<T extends Serializable> implements ListIterator<T> {
 	}
 
 	@Override
-	public void set(T e) {
+	public void set(E e) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public void add(T e) {
+	public void add(E e) {
 		throw new UnsupportedOperationException();
 	}
 

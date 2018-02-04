@@ -22,7 +22,7 @@ import jp.ksgwr.array.index.SeparableIndex;
  *
  * @param <E>
  */
-public class DiskArrayList<E extends Serializable> extends ExArrayList<E> {
+public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E> implements IndexableExArrayList<E> {
 
 	private SeparableIndex<E> index;
 
@@ -438,6 +438,11 @@ public class DiskArrayList<E extends Serializable> extends ExArrayList<E> {
 			}
 			this.isUpdatedCache = true;
 		}
+	}
+
+	@Override
+	public void save(SeparableIndex<E> index) throws IOException {
+		index.save(this.iterator(), this.size(), target);
 	}
 
 	@SuppressWarnings("unchecked")
