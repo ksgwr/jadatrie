@@ -12,12 +12,12 @@ public class ArraySearchUtilTest {
 
     @Test
     public void infimumBinarySearchTest() {
-        List<Integer> ary = new ArrayList<>(Arrays.asList(new Integer[] {
-                1,
+        List<Integer> ary = new ArrayList<>(Arrays.asList(1,
                 10,
                 20,
-                30
-        }));
+                30,
+                40,
+                50));
 
         int actual;
 
@@ -30,13 +30,23 @@ public class ArraySearchUtilTest {
         actual = ArraySearchUtil.infimumBinarySearch(ary, 5);
         assertEquals(0, actual);
 
+        actual = ArraySearchUtil.infimumBinarySearch(ary, 15);
+        assertEquals(1, actual);
+
         actual = ArraySearchUtil.infimumBinarySearch(ary, 25);
         assertEquals(2, actual);
 
-        actual = ArraySearchUtil.infimumBinarySearch(ary, 30);
-        assertEquals(3, actual);
-
         actual = ArraySearchUtil.infimumBinarySearch(ary, 35);
         assertEquals(3, actual);
+
+        actual = ArraySearchUtil.infimumBinarySearch(ary, 45);
+        assertEquals(4, actual);
+
+        actual = ArraySearchUtil.infimumBinarySearch(ary, 50);
+        assertEquals(5, actual);
+
+        actual = ArraySearchUtil.infimumBinarySearch(ary, 55);
+        assertEquals(5, actual);
     }
+
 }
