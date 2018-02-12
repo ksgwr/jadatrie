@@ -5,11 +5,11 @@ import java.util.List;
 public class KeyDoubleArrayTrie extends DoubleArrayTrie<Boolean> {
 
 	public KeyDoubleArrayTrie() {
-		super(Boolean.class);
+		super();
 	}
 
 	public void build(String[] key) {
-		super.setKeyValue(key, null);
+		super.setKeyValue(key, null, Boolean.class);
 		super.build(new KeyArrayIterator(key), key.length, false);
 	}
 

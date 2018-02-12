@@ -8,36 +8,31 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import jp.ksgwr.array.*;
-import jp.ksgwr.jadatrie.core.CharFreq;
-import jp.ksgwr.jadatrie.core.EfficientNodeList;
-import jp.ksgwr.jadatrie.core.Node;
-import jp.ksgwr.jadatrie.core.SearchResult;
-import jp.ksgwr.jadatrie.core.Unit;
+import jp.ksgwr.jadatrie.core.*;
 
-public class DoubleArrayTrie<T> {
-
-	protected final Class<T> target;
+public class DoubleArrayTrie<VALUE> {
 
 	protected IndexableExArrayList<Unit> units;
 
 	// UTF-16だと圧縮率が悪い、頻度順にソートして高い頻度に低い番号をつけると圧縮率が良い
 	protected IndexableExArrayList<Integer> codes;
-
 	protected int codeLength;
 
     protected List<String> keys;
-    protected List<T> vals;
+    protected List<VALUE> vals;
+
+    protected InitializeStrategy initializeStrategy;
+    protected PositionStrategy positonStrategy;
+    protected ResizeStrategy resizeStrategy;
 
     protected DoubleArrayTrieBuildListener debugger;
 
@@ -45,70 +40,102 @@ public class DoubleArrayTrie<T> {
     private int currentPos;
 
     // dummy node
-    private final Node tmpnode = new Node(0,0,0);
+    private final Node TMPNODE = new Node(0,0,0);
 
-    public DoubleArrayTrie(Class<T> target) {
-    	this(target, new IndexableCachedMemoryArrayList<>(Unit.class, 0));
-    }
+	public DoubleArrayTrie() {
+		this(new DoubleArrayInstanceBuilder<VALUE>().initializeUnsetValue());
+	}
 
-    public DoubleArrayTrie(Class<T> target, IndexableExArrayList<Unit> units) {
-    	this(target, units, new IndexableCachedMemoryArrayList<>(Integer.class, 0, Character.MAX_CODE_POINT, 1));
-    }
-
-    public DoubleArrayTrie(Class<T> target, IndexableExArrayList<Unit> units, IndexableExArrayList<Integer> codes) {
-    	this.target = target;
-    	this.units = units;
-    	this.codes = codes;
-    }
+	protected DoubleArrayTrie(DoubleArrayInstanceBuilder<VALUE> builder) {
+		this.units = builder.getUnits();
+		this.codes = builder.getCodes();
+		this.initializeStrategy = builder.getInitializeStrategy();
+		this.positonStrategy = builder.getPositionStrategy();
+		this.resizeStrategy = builder.getResizeStrategy();
+	}
 
     public void setBuildListener(DoubleArrayTrieBuildListener listener) {
     	this.debugger = listener;
-    }
-
-    public Class<T> getValueClass() {
-    	return target;
     }
 
     public int getDoubleArraySize() {
     	return units.size();
     }
 
+    public float calcFillingRate() {
+        int cnt = 0;
+        for (Unit unit: units) {
+            if (unit != null) {
+                cnt++;
+            }
+        }
+        return (float) cnt / (units.size() - 1);
+    }
+
     public int getKeySize() {
     	return keys.size();
     }
 
-    public void build(TreeMap<String, T> entries) {
+	/**
+	 * build index
+	 * require large memory
+	 * @param entries entries (sorted by key)
+	 * @param target value target class
+	 */
+	public void build(TreeMap<String, VALUE> entries, Class<VALUE> target) {
     	int size = entries.size();
     	this.keys = new CachedMemoryArrayList<>(String.class, size, 1);
 		this.vals = new CachedMemoryArrayList<>(target, size, 1);
     	build(entries.entrySet().iterator(), size, true);
     }
 
-    public void build(Iterator<Entry<String,T>> entries, int size, ExArrayList<String> emptyKey, ExArrayList<T> emptyVal) {
+	/**
+	 * build index
+	 * can save memory if using DiskArrayList
+	 * @param entries entries iterator
+	 * @param size entries size
+	 * @param emptyKey empty key list
+	 * @param emptyVal empty value list
+	 */
+    public void build(Iterator<Entry<String, VALUE>> entries, int size, ExArrayList<String> emptyKey, ExArrayList<VALUE> emptyVal) {
     	this.keys = emptyKey;
     	this.vals = emptyVal;
+    	if (size != emptyKey.size()) {
+			throw new RuntimeException("emptyKey require size:" + size);
+		}
+		if (emptyVal != null && size != emptyVal.size()) {
+			throw new RuntimeException("emptyVal require size:" + size);
+		}
     	this.build(entries, size, true);
     }
 
-    public void build(String[] key, T[] val) {
-    	this.keys = new CachedMemoryArrayList<>(String.class, key, 1);
-    	if (val != null) {
-    		this.vals = new CachedMemoryArrayList<>(target, val, 1);
-    	}
+	/**
+	 * build index
+	 * @param key sorted key array
+	 * @param val value array
+	 * @param target value class
+	 */
+    public void build(String[] key, VALUE[] val, Class<VALUE> target) {
+    	this.setKeyValue(key, val, target);
     	build(new DoubleArrayIterator<>(key, val), key.length, false);
     }
 
-    public void build(List<String> key, List<T> val) {
+	/**
+	 * build index
+	 * @param key sorted key list
+	 * @param val value list
+	 */
+	public void build(List<String> key, List<VALUE> val) {
     	this.setKeyValue(key, val);
     	build(new DoubleListIterator<>(key, val), key.size(), false);
     }
 
-	protected void build(Iterator<Entry<String,T>> entries, int size, boolean requireInitKeyValue) {
+	protected void build(Iterator<Entry<String, VALUE>> entries, int size, boolean requireInitKeyValue) {
     	// 文字列カウントと最初の文字が同じものでNodeの木構造を作成
     	CharFreq[] cfs = new CharFreq[Character.MAX_CODE_POINT];
     	List<Node> siblings = new ArrayList<>(size);
     	if (entries.hasNext()) {
-    		Entry<String, T> entry = entries.next();
+    		Entry<String, VALUE> entry = entries.next();
     		String key = entry.getKey();
 			if (requireInitKeyValue) {
 				this.keys.set(0, key);
@@ -188,11 +215,11 @@ public class DoubleArrayTrie<T> {
 			node.code = codes.get(node.code);
 		}
 
-    	// List<Node>を範囲(潜在ノード数)でソートすると効率が良い
+    	// WON'T FIX:List<Node>を範囲(潜在ノード数)でソートすると効率が良い
     	// 文字列長にも影響するので完璧ではない
-		int unitSize = codeLength * size;
-		if (unitSize < 0) {
-			unitSize = size;
+		int unitSize = initializeStrategy.initializeSize(codeLength, size, keys);
+		if (debugger != null) {
+			debugger.initializeSize(codeLength, size, keys, unitSize);
 		}
 		this.units.clear();
 		this.units.resize(unitSize);
@@ -234,36 +261,37 @@ public class DoubleArrayTrie<T> {
         		cur = codes.get(key.charAt(depth));
 
         		if(prevc != cur) {
-        			tmpnode.code = prevc;
-        			tmpnode.left = previ;
-        			tmpnode.right = i;
-        			newSiblings.add(tmpnode);
+        			TMPNODE.code = prevc;
+        			TMPNODE.left = previ;
+        			TMPNODE.right = i;
+        			newSiblings.add(TMPNODE);
         			prevc = cur;
         			previ = i;
         		}
         		i++;
         	}
 
-			tmpnode.code = cur;
-			tmpnode.left = previ;
-			tmpnode.right = i;
-			newSiblings.add(tmpnode);
+			TMPNODE.code = cur;
+			TMPNODE.left = previ;
+			TMPNODE.right = i;
+			newSiblings.add(TMPNODE);
 
     	}
     }
 
     private int insert(List<Node> siblings, int depth) {
-    	int maxCode = 0;
+		int maxCode = 0;
     	for (Node node:siblings) {
     		if (maxCode < node.code) {
     			maxCode = node.code;
     		}
     	}
+		currentPos = positonStrategy.startPosition(currentPos, maxCode, units, keys, siblings);
     	loop: while(true) {
     		currentPos++;
     		if (units.size() <= currentPos + maxCode) {
     			int currentSize = units.size();
-    			int expandSize = currentPos + maxCode + 1 + keys.size() - siblings.get(siblings.size() - 1).right;
+    			int expandSize = resizeStrategy.resize(currentSize, currentPos, maxCode, units, keys, siblings);
     			if (debugger != null) {
     				debugger.resize(siblings, depth, currentPos, maxCode, currentSize, expandSize);
 				}
@@ -621,7 +649,7 @@ public class DoubleArrayTrie<T> {
 		}
 	}
 
-    public List<Entry<String,T>> indexOf(String target, int[] pos, boolean startStrict, boolean endStrict, boolean longestStrict) {
+    public List<Entry<String, VALUE>> indexOf(String target, int[] pos, boolean startStrict, boolean endStrict, boolean longestStrict) {
 
     	return null;
     }
@@ -768,29 +796,29 @@ public class DoubleArrayTrie<T> {
 		}
     }
 
-    public void setKeyValue(Iterator<Entry<String,T>> entries, int size) {
-    	this.setKeyValue(entries, size, new CachedMemoryArrayList<String>(String.class, size, 1), new CachedMemoryArrayList<T>(target, size, 1));
+    public void setKeyValue(Iterator<Entry<String, VALUE>> entries, int size, Class<VALUE> target) {
+    	this.setKeyValue(entries, size, new CachedMemoryArrayList<String>(String.class, size, 1), new CachedMemoryArrayList<VALUE>(target, size, 1));
     }
 
-	public void setKeyValue(Iterator<Entry<String,T>> entries, int size, ExArrayList<String> emptyKeys, ExArrayList<T> emptyVals) {
+	public void setKeyValue(Iterator<Entry<String, VALUE>> entries, int size, ExArrayList<String> emptyKeys, ExArrayList<VALUE> emptyVals) {
     	this.keys = emptyKeys;
     	this.vals = emptyVals;
     	int i = 0;
     	while(entries.hasNext()) {
-    		Entry<String,T> entry = entries.next();
+    		Entry<String, VALUE> entry = entries.next();
     		this.keys.set(i, entry.getKey());
     		this.vals.set(i, entry.getValue());
     		i++;
     	}
     }
 
-	public void setKeyValue(List<String> keys, List<T> vals) {
+	public void setKeyValue(List<String> keys, List<VALUE> vals) {
 		this.keys = keys;
 		this.vals = vals;
 	}
 
-    public void setKeyValue(String[] keys, T[] vals) {
-    	List<T> valList = vals == null ? null : new CachedMemoryArrayList<>(target, vals, 1);
+    public void setKeyValue(String[] keys, VALUE[] vals, Class<VALUE> target) {
+    	List<VALUE> valList = vals == null ? null : new CachedMemoryArrayList<>(target, vals, 1);
     	this.setKeyValue(new CachedMemoryArrayList<>(String.class, keys, 1), valList);
     }
 

@@ -23,6 +23,71 @@ DoubleArrayTrieの最大の特徴としては、commonPrefixSearchが高速に�
 * exactSpellerMatch(String target)
   * 1文字違いのエントリを探索します。
 
+## Build Performance
+
+[Wikipedia](https://dumps.wikimedia.org/jawiki/latest/)のタイトル一覧(jawiki-latest-all-titles.gz)データでインデックスを作成してみます。なお、このデータは整列済みです。測定時は約290万件(圧縮時17MB)のデータでした。
+
+下記はインデックスを作成するためにsizeを読み込む共通処理です。
+
+```java
+File file = new File("data", "jawiki-latest-all-titles.gz");
+BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file)), "UTF-8"));
+FileReadIterator<Boolean> ite = new FileReadIterator<>(br, new SimpleKeyValueDeserializer());
+ite.next(); // skip header
+int size = ite.readRestLines();
+// 再度読み込み
+br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file)), "UTF-8"));
+ite = new FileReadIterator<>(br, new SimpleKeyValueDeserializer());
+ite.next(); // skip header
+```
+
+まずは速度優先で全てをメモリに展開してインデックスを作成します。
+
+```java
+DoubleArrayTrie<Boolean> datrie = new DoubleArrayTrie<Boolean>();
+// メモリ展開用リスト(指定サイズが用意される配列型リスト)
+ExArrayList<String> key = new CachedMemoryArrayList<>(String.class, size);
+
+datrie.build(ite, size, key, null); // build time : 10 [sec]
+Runtime.getRuntime().totalMemory() // 1600 MB
+datrie.getDoubleArraySize() // 約2800万
+datrie.calcFillingRate() // DoubleArray充填率 0.6
+```
+
+ディスクを利用しメモリ使用量を優先して作成することもできます。
+
+```java
+// 要素を指定した分割数でディスクに書き出します。小さいほど省メモリですが遅くなります。
+File unitDirectory = new File("units");
+File keyDirectory = new File("key");
+unitDirectory.mkdir();
+keyDirectory.mkdir();
+int separateSize = 1024 * 64;
+DoubleArrayTrie<Boolean> datrie = new DoubleArrayInstanceBuilder<Boolean>()
+                                .setUnitsFixDiskArray(unitDirectory, separateSize)
+                                .createInstance();
+// keyもディスクに書き出します
+ExArrayList<String> key = new DiskArrayList<String>(String.class, keyDirectory, size, separateSize);
+
+datrie.build(ite, size, key, null); // build time : 1 min 47 sec
+Runtime.getRuntime().totalMemory() // 340 MB
+// TODO: ディスクを利用した方法は検索時もスレッドセーフでなくなるため今後修正します
+```
+
+充填率を高める（サイズ縮小、検索時の速度を向上させる）ためにはFillingRatePriorityPositionStrategyを利用してください。インデックス作成は遅くなります。
+
+```java
+DoubleArrayTrie<Boolean> datrie =  new DoubleArrayInstanceBuilder<Boolean>()
+                                .setPositionStrategy(new FillingRatePriorityPositionStrategy())
+                                .createInstance();
+// メモリ展開用リスト(指定サイズが用意される配列型リスト)
+ExArrayList<String> key = new CachedMemoryArrayList<>(String.class, size);
+
+datrie.build(ite, size, key, null); // build time : 14 [sec]
+datrie.getDoubleArraySize() // 約2000万
+datrie.calcFillingRate() // DoubleArray充填率 0.8
+```
+
 ## 高速化実装Tips
 
 * UTF-16(unicode)をそのままマッピングすると隙間が大量にできるため、自前でマッピングするか1byte毎扱った方が良い
