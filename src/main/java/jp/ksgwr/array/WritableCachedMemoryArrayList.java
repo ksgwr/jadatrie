@@ -7,14 +7,14 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 
-public class IndexableCachedMemoryArrayList<E extends Serializable> extends CachedMemoryArrayList<E> implements IndexableExArrayList<E> {
+public class WritableCachedMemoryArrayList<E extends Serializable> extends CachedMemoryArrayList<E> implements WritableExArrayList<E> {
 
     /**
      * constructor
      * @param target target class
      * @param size initial array size
      */
-    public IndexableCachedMemoryArrayList(Class<E> target, int size) {
+    public WritableCachedMemoryArrayList(Class<E> target, int size) {
         super(target, size);
     }
 
@@ -23,11 +23,11 @@ public class IndexableCachedMemoryArrayList<E extends Serializable> extends Cach
      * @param target target class
      * @param size initial array size
      */
-    public IndexableCachedMemoryArrayList(Class<E> target, E defaultValue, int size) {
+    public WritableCachedMemoryArrayList(Class<E> target, E defaultValue, int size) {
         super(target, defaultValue, size);
     }
 
-    public IndexableCachedMemoryArrayList(Class<E> target, int size, int resizeCapacity) {
+    public WritableCachedMemoryArrayList(Class<E> target, int size, int resizeCapacity) {
         super(target, size, resizeCapacity);
     }
 
@@ -38,11 +38,11 @@ public class IndexableCachedMemoryArrayList<E extends Serializable> extends Cach
      * @param resizeCapacity resize capacity size
      */
     @SuppressWarnings("unchecked")
-    public IndexableCachedMemoryArrayList(Class<E> target, E defaultValue, int size, int resizeCapacity) {
+    public WritableCachedMemoryArrayList(Class<E> target, E defaultValue, int size, int resizeCapacity) {
         super(target, defaultValue, size, resizeCapacity);
     }
 
-    public IndexableCachedMemoryArrayList(Class<E> target, E[] val, int resizeCapacity) {
+    public WritableCachedMemoryArrayList(Class<E> target, E[] val, int resizeCapacity) {
         super(target, val, resizeCapacity);
     }
 
@@ -52,7 +52,7 @@ public class IndexableCachedMemoryArrayList<E extends Serializable> extends Cach
      * @param val initial val array
      * @param resizeCapacity resize capacity size
      */
-    public IndexableCachedMemoryArrayList(Class<E> target, E defaultValue, E[] val, int resizeCapacity) {
+    public WritableCachedMemoryArrayList(Class<E> target, E defaultValue, E[] val, int resizeCapacity) {
         super(target, defaultValue, val, resizeCapacity);
     }
 
@@ -62,7 +62,7 @@ public class IndexableCachedMemoryArrayList<E extends Serializable> extends Cach
     }
 
     @Override
-    public void load(SeparableIndex<E> index) throws IOException, ClassNotFoundException {
+    public void load(SeparableIndex<E> index) {
         // copy all values
         E[] val = (E[]) Array.newInstance(target, index.getItemSize());
         IndexIterator<E> iterator = new IndexIterator<>(target, index, defaultValue);

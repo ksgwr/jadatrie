@@ -9,7 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-public interface IndexableExArrayList<E extends Serializable> extends ExArrayList<E> {
+public interface WritableExArrayList<E extends Serializable> extends ExArrayList<E> {
 
     /**
      * load external index

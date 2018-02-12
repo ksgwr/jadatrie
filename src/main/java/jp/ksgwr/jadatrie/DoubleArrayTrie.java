@@ -21,10 +21,10 @@ import jp.ksgwr.jadatrie.core.*;
 
 public class DoubleArrayTrie<VALUE> {
 
-	protected IndexableExArrayList<Unit> units;
+	protected WritableExArrayList<Unit> units;
 
 	// UTF-16だと圧縮率が悪い、頻度順にソートして高い頻度に低い番号をつけると圧縮率が良い
-	protected IndexableExArrayList<Integer> codes;
+	protected WritableExArrayList<Integer> codes;
 	protected int codeLength;
 
     protected List<String> keys;
@@ -736,6 +736,9 @@ public class DoubleArrayTrie<VALUE> {
     }
 
     public void save(File file) throws IOException {
+
+
+
     	DataOutputStream out = null;
 		try {
 			out = new DataOutputStream(new BufferedOutputStream(
@@ -772,7 +775,7 @@ public class DoubleArrayTrie<VALUE> {
 					new FileInputStream(file)));
 
 			int len = is.readInt();
-			this.units = new IndexableCachedMemoryArrayList<>(Unit.class, len);
+			this.units = new WritableCachedMemoryArrayList<>(Unit.class, len);
 			for (int i=0;i<len;i++) {
 				boolean b = is.readBoolean();
 				if (b) {
@@ -782,7 +785,7 @@ public class DoubleArrayTrie<VALUE> {
 				}
 			}
 			len = is.readInt();
-			this.codes = new IndexableCachedMemoryArrayList<>(Integer.class, len);
+			this.codes = new WritableCachedMemoryArrayList<>(Integer.class, len);
 			this.codeLength = is.readInt();
 			len = this.codeLength - 1;
 			for (int i=0;i<len;i++) {

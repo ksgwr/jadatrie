@@ -22,7 +22,7 @@ import jp.ksgwr.array.index.SeparableIndex;
  *
  * @param <E>
  */
-public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E> implements IndexableExArrayList<E> {
+public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E> implements WritableExArrayList<E> {
 
 	private SeparableIndex<E> index;
 
@@ -224,12 +224,7 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 			v = cacheVals[i - cacheOffset];
 		} catch (ArrayIndexOutOfBoundsException e) {
 			loadCacheOrNewSegment(i);
-			try {
-				v = cacheVals[i - cacheOffset];
-			} catch (ArrayIndexOutOfBoundsException e2) {
-				e2.printStackTrace();
-				v = null;
-			}
+			v = cacheVals[i - cacheOffset];
 		}
 		return v == null ? defaultValue : v;
 	}
@@ -244,11 +239,7 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 			cacheVals[i - cacheOffset] = t;
 		} catch (ArrayIndexOutOfBoundsException e) {
 			loadCacheOrNewSegment(i);
-			try {
-				cacheVals[i - cacheOffset] = t;
-			} catch (ArrayIndexOutOfBoundsException e2) {
-				e2.printStackTrace();
-			}
+			cacheVals[i - cacheOffset] = t;
 		}
 		isUpdatedCache = true;
 		return t;

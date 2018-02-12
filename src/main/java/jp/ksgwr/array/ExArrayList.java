@@ -3,6 +3,17 @@ package jp.ksgwr.array;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Extra Array List
+ * this list is constant capacity size.
+ * it expects to call "get" and "set" than "add", so it can access null items.
+ * it implemented by distributed internal array.
+ * it can allocate internal array efficiently and write external file partially.
+ *
+ * @author ksgwr
+ *
+ * @param <E> item class
+ */
 public interface ExArrayList<E> extends List<E>, AutoCloseable {
 
     /**

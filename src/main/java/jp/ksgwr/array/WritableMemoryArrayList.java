@@ -7,29 +7,29 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 
-public class IndexableMemoryArrayList<E extends Serializable> extends MemoryArrayList<E> implements IndexableExArrayList<E> {
+public class WritableMemoryArrayList<E extends Serializable> extends MemoryArrayList<E> implements WritableExArrayList<E> {
 
-    public IndexableMemoryArrayList(Class<E> target, int size) {
+    public WritableMemoryArrayList(Class<E> target, int size) {
         super(target, size);
     }
 
-    public IndexableMemoryArrayList(Class<E> target, E defaultValue, int size) {
+    public WritableMemoryArrayList(Class<E> target, E defaultValue, int size) {
         super(target, defaultValue, size);
     }
 
-    public IndexableMemoryArrayList(Class<E> target, int size, int resizeCapacity) {
+    public WritableMemoryArrayList(Class<E> target, int size, int resizeCapacity) {
         super(target, size, resizeCapacity);
     }
 
-    public IndexableMemoryArrayList(Class<E> target, E defaultValue, int size, int resizeCapacity) {
+    public WritableMemoryArrayList(Class<E> target, E defaultValue, int size, int resizeCapacity) {
         super(target, defaultValue, size, resizeCapacity);
     }
 
-    public IndexableMemoryArrayList(Class<E> target, E[] val, int resizeCapacity) {
+    public WritableMemoryArrayList(Class<E> target, E[] val, int resizeCapacity) {
         super(target, null, val, resizeCapacity);
     }
 
-    public IndexableMemoryArrayList(Class<E> target, E defaultValue, E[] val, int resizeCapacity) {
+    public WritableMemoryArrayList(Class<E> target, E defaultValue, E[] val, int resizeCapacity) {
         super(target, defaultValue, val, resizeCapacity);
     }
 
@@ -40,7 +40,7 @@ public class IndexableMemoryArrayList<E extends Serializable> extends MemoryArra
 
     @SuppressWarnings("unchecked")
     @Override
-    public void load(SeparableIndex<E> index) throws IOException, ClassNotFoundException {
+    public void load(SeparableIndex<E> index) {
         // copy all values
         E[] val = (E[]) Array.newInstance(target, index.getItemSize());
         IndexIterator<E> iterator = new IndexIterator<>(target, index, defaultValue);

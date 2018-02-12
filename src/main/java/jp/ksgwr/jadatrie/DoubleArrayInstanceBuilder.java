@@ -1,10 +1,8 @@
 package jp.ksgwr.jadatrie;
 
-import javafx.geometry.Pos;
 import jp.ksgwr.array.DiskArrayList;
-import jp.ksgwr.array.ExArrayList;
-import jp.ksgwr.array.IndexableCachedMemoryArrayList;
-import jp.ksgwr.array.IndexableExArrayList;
+import jp.ksgwr.array.WritableCachedMemoryArrayList;
+import jp.ksgwr.array.WritableExArrayList;
 import jp.ksgwr.array.index.InfoDynamicSegmentIndex;
 import jp.ksgwr.array.index.ObjectStreamIndexer;
 import jp.ksgwr.jadatrie.core.*;
@@ -14,9 +12,9 @@ import java.util.List;
 
 public class DoubleArrayInstanceBuilder<VALUE> {
 
-    private IndexableExArrayList<Unit> units;
+    private WritableExArrayList<Unit> units;
 
-    private IndexableExArrayList<Integer> codes;
+    private WritableExArrayList<Integer> codes;
 
     private DoubleArrayTrieBuildListener listener;
 
@@ -45,10 +43,10 @@ public class DoubleArrayInstanceBuilder<VALUE> {
 
     protected DoubleArrayInstanceBuilder<VALUE> initializeUnsetValue() {
         if (units == null) {
-            units = new IndexableCachedMemoryArrayList<>(Unit.class, 0);
+            units = new WritableCachedMemoryArrayList<>(Unit.class, 0);
         }
         if (codes == null) {
-            codes = new IndexableCachedMemoryArrayList<>(Integer.class, (Integer)0, Character.MAX_CODE_POINT);
+            codes = new WritableCachedMemoryArrayList<>(Integer.class, (Integer)0, Character.MAX_CODE_POINT);
         }
         if (initializeStrategy == null) {
             initializeStrategy = new SimpleInitializeStrategy();
@@ -62,11 +60,11 @@ public class DoubleArrayInstanceBuilder<VALUE> {
         return this;
     }
 
-    protected IndexableExArrayList<Unit> getUnits() {
+    protected WritableExArrayList<Unit> getUnits() {
         return units;
     }
 
-    protected IndexableExArrayList<Integer> getCodes() {
+    protected WritableExArrayList<Integer> getCodes() {
         return codes;
     }
 
@@ -82,7 +80,7 @@ public class DoubleArrayInstanceBuilder<VALUE> {
         return resizeStrategy;
     }
 
-    public DoubleArrayInstanceBuilder<VALUE> setUnitsExArray(IndexableExArrayList<Unit> units) {
+    public DoubleArrayInstanceBuilder<VALUE> setUnitsExArray(WritableExArrayList<Unit> units) {
         this.units = units;
         return this;
     }
