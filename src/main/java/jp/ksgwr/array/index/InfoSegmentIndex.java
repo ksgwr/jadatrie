@@ -174,6 +174,12 @@ public class InfoSegmentIndex<T extends Serializable, Serializer, Deserializer> 
 				vals[tmpi++] = ite.next();
 				i++;
 			}
+			if (serializer != null) {
+				indexer.serializeSegment(serializer, vals, tmpi);
+				indexer.closeSerializer(serializer);
+				serializer = null;
+			}
+			saveInfo();
 		} finally {
 			if (serializer != null) {
 				indexer.closeSerializer(serializer);

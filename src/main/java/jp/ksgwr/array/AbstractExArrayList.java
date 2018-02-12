@@ -31,8 +31,7 @@ public abstract class AbstractExArrayList<E> implements ExArrayList<E> {
 	 * @param target target class
 	 */
 	protected AbstractExArrayList(Class<E> target) {
-		this.target = target;
-		this.defaultValue = null;
+		this(target, null);
 	}
 
 	/**

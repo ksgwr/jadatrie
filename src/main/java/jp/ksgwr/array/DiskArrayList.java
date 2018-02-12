@@ -245,7 +245,7 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 		return t;
 	}
 
-	private IndexIterator<E> createIndexIterator(int i) {
+	private IndexIterator<E> createIndexIterator(int i, E defaultValue) {
 		Map<Integer, E[]> cacheSegment = new TreeMap<>();
 		if (this.cacheVals != null) {
 			cacheSegment.put(this.cacheSegmentNum, this.cacheVals);
@@ -258,7 +258,7 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 
 	@Override
 	public Iterator<E> iterator() {
-		return createIndexIterator(0);
+		return createIndexIterator(0, defaultValue);
 	}
 
 	private E[] getSegmentBySegmentNumber(int segmentNum) {
@@ -408,6 +408,7 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 		this.isUpdatedSecondCache = false;
 		this.cacheOffset = 0;
 		this.cacheSegmentNum = 0;
+		this.isUpdatedCache = true;
 
 		int size = index.getItemSize();
 		if (this.size < size) {
@@ -416,24 +417,26 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 			decreaseSize(size);
 		}
 
-		IndexIterator<E> iterator = new IndexIterator<>(target, index, defaultValue);
-		if (this.segmentSize > 1) {
-			this.index.save(iterator, size, target);
-			this.cacheVals = this.index.loadSegment(this.cacheSegmentNum, target);
-			this.isUpdatedCache = false;
-		} else {
-			// load cache only, not save at time
-			this.cacheVals = (E[]) Array.newInstance(target, index.getItemPerSegmentSize(cacheSegmentNum));
-			while (iterator.hasNext()) {
-				this.cacheVals[iterator.index()] = iterator.next();
+		IndexIterator<E> iterator = new IndexIterator<>(target, index, defaultValue, size - 1, null);
+		int tmpSegmentNum = segmentSize - 1;
+		this.cacheVals = (E[]) Array.newInstance(target, this.index.getItemPerSegmentSize(tmpSegmentNum));
+		int len = size - this.index.getOffset(tmpSegmentNum);
+		int i = len - 1;
+		while (iterator.hasPrevious()) {
+			if (i < 0) {
+				this.index.saveSegment(tmpSegmentNum, this.cacheVals, len);
+				tmpSegmentNum--;
+				this.cacheVals = (E[]) Array.newInstance(target, this.index.getItemPerSegmentSize(tmpSegmentNum));
+				len = cacheVals.length;
+				i = len - 1;
 			}
-			this.isUpdatedCache = true;
+			this.cacheVals[i--] = iterator.previous();
 		}
 	}
 
 	@Override
 	public void save(SeparableIndex<E> index) throws IOException {
-		index.save(this.iterator(), this.size(), target);
+		index.save(this.createIndexIterator(0, null), this.size(), target);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -624,24 +627,21 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 	@SuppressWarnings("unchecked")
 	@Override
 	public void clear() {
-		this.secondCacheOffset = -1;
-		this.secondCacheVals = null;
-		this.isUpdatedSecondCache = false;
-		this.isUpdatedCache = true;
-		this.isUpdatedInfo = true;
-
-		if (this.segmentSize == 1) {
+		if (this.cacheVals != null) {
 			Arrays.fill(cacheVals, null);
-		} else {
+			this.isUpdatedCache = true;
+		}
+		if (this.secondCacheVals != null) {
+			Arrays.fill(secondCacheVals, null);
+			this.isUpdatedSecondCache = true;
+		}
+		E[] val = null;
+		for (int i = 0; i < segmentSize; i++) {
 			try {
-				this.cacheSegmentNum = 0;
-				this.cacheOffset = 0;
-				int valSize = index.getItemPerSegmentSize(cacheSegmentNum);
-				this.cacheVals = (E[]) Array.newInstance(target, valSize);
-				index.saveSegment(cacheSegmentNum, cacheVals, 0);
-				for (int i = 1; i < segmentSize; i++) {
-					valSize = index.getItemPerSegmentSize(i);
-					E[] val = (E[]) Array.newInstance(target, valSize);
+				if (i != this.cacheSegmentNum && i != this.secondSegmentNum) {
+					if (val == null) {
+						val = (E[]) Array.newInstance(target, 0);
+					}
 					index.saveSegment(i, val, 0);
 				}
 			} catch (IOException e) {
@@ -662,12 +662,12 @@ public class DiskArrayList<E extends Serializable> extends AbstractExArrayList<E
 
 	@Override
 	public ListIterator<E> listIterator() {
-		return createIndexIterator(0);
+		return createIndexIterator(0, defaultValue);
 	}
 
 	@Override
 	public ListIterator<E> listIterator(int index) {
-		return createIndexIterator(index);
+		return createIndexIterator(index, defaultValue);
 	}
 
 	@Override
