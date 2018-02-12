@@ -4,10 +4,12 @@ import jp.ksgwr.array.DiskArrayList;
 import jp.ksgwr.array.WritableCachedMemoryArrayList;
 import jp.ksgwr.array.WritableExArrayList;
 import jp.ksgwr.array.index.InfoDynamicSegmentIndex;
+import jp.ksgwr.array.index.InfoSegmentIndexer;
 import jp.ksgwr.array.index.ObjectStreamIndexer;
 import jp.ksgwr.jadatrie.core.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 public class DoubleArrayInstanceBuilder<VALUE> {
@@ -26,27 +28,40 @@ public class DoubleArrayInstanceBuilder<VALUE> {
 
     private List<String> keys;
 
-    private Class<VALUE> target;
-
     private List<VALUE> vals;
+
+    private File indexDirectory;
+
+    private InfoSegmentIndexer indexer;
 
     public DoubleArrayInstanceBuilder() {
     }
 
-    public DoubleArrayTrie<VALUE> createInstance() {
+    public DoubleArrayTrie<VALUE> createInstance() throws IOException {
         initializeUnsetValue();;
 
         DoubleArrayTrie<VALUE> datrie = new DoubleArrayTrie<>(this);
-        datrie.debugger = listener;
+        datrie.setKeyValue(keys, vals);
+
+        if (indexDirectory != null) {
+            if (indexer == null) {
+                datrie.load(indexDirectory);
+            } else {
+                datrie.load(indexDirectory, indexer);
+            }
+        }
+
         return datrie;
     }
 
     protected DoubleArrayInstanceBuilder<VALUE> initializeUnsetValue() {
-        if (units == null) {
-            units = new WritableCachedMemoryArrayList<>(Unit.class, 0);
-        }
-        if (codes == null) {
-            codes = new WritableCachedMemoryArrayList<>(Integer.class, (Integer)0, Character.MAX_CODE_POINT);
+        if (indexDirectory == null) {
+            if (units == null) {
+                units = new WritableCachedMemoryArrayList<>(Unit.class, 0);
+            }
+            if (codes == null) {
+                codes = new WritableCachedMemoryArrayList<>(Integer.class, (Integer) 0, Character.MAX_CODE_POINT);
+            }
         }
         if (initializeStrategy == null) {
             initializeStrategy = new SimpleInitializeStrategy();
@@ -68,6 +83,10 @@ public class DoubleArrayInstanceBuilder<VALUE> {
         return codes;
     }
 
+    protected DoubleArrayTrieBuildListener getListener() {
+        return listener;
+    }
+
     protected InitializeStrategy getInitializeStrategy() {
         return initializeStrategy;
     }
@@ -78,6 +97,11 @@ public class DoubleArrayInstanceBuilder<VALUE> {
 
     protected ResizeStrategy getResizeStrategy() {
         return resizeStrategy;
+    }
+
+    public DoubleArrayInstanceBuilder<VALUE> setCodes(WritableExArrayList<Integer> codes) {
+        this.codes = codes;
+        return this;
     }
 
     public DoubleArrayInstanceBuilder<VALUE> setUnitsExArray(WritableExArrayList<Unit> units) {
@@ -112,6 +136,27 @@ public class DoubleArrayInstanceBuilder<VALUE> {
 
     public DoubleArrayInstanceBuilder<VALUE> setResizeStrategy(ResizeStrategy resizeStrategy) {
         this.resizeStrategy = resizeStrategy;
+        return this;
+    }
+
+    public DoubleArrayInstanceBuilder<VALUE> loadIndex(File indexDirectory) {
+        this.indexDirectory = indexDirectory;
+        return this;
+    }
+
+    public DoubleArrayInstanceBuilder<VALUE> loadIndex(File indexDirectory, InfoSegmentIndexer indexer) {
+        this.indexDirectory = indexDirectory;
+        this.indexer = indexer;
+        return this;
+    }
+
+    public DoubleArrayInstanceBuilder<VALUE> setKeys(List<String> keys) {
+        this.keys = keys;
+        return this;
+    }
+
+    public DoubleArrayInstanceBuilder<VALUE> setValues(List<VALUE> vals) {
+        this.vals = vals;
         return this;
     }
 }

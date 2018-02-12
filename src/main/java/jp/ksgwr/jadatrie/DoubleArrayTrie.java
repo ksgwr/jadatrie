@@ -1,13 +1,6 @@
 package jp.ksgwr.jadatrie;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,9 +10,12 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import jp.ksgwr.array.*;
+import jp.ksgwr.array.index.ImmutableStreamIndex;
+import jp.ksgwr.array.index.InfoSegmentIndexer;
+import jp.ksgwr.array.index.ObjectStreamIndexer;
 import jp.ksgwr.jadatrie.core.*;
 
-public class DoubleArrayTrie<VALUE> {
+public class DoubleArrayTrie<VALUE> implements AutoCloseable {
 
 	protected WritableExArrayList<Unit> units;
 
@@ -31,7 +27,7 @@ public class DoubleArrayTrie<VALUE> {
     protected List<VALUE> vals;
 
     protected InitializeStrategy initializeStrategy;
-    protected PositionStrategy positonStrategy;
+    protected PositionStrategy positionStrategy;
     protected ResizeStrategy resizeStrategy;
 
     protected DoubleArrayTrieBuildListener debugger;
@@ -49,14 +45,11 @@ public class DoubleArrayTrie<VALUE> {
 	protected DoubleArrayTrie(DoubleArrayInstanceBuilder<VALUE> builder) {
 		this.units = builder.getUnits();
 		this.codes = builder.getCodes();
+		this.debugger = builder.getListener();
 		this.initializeStrategy = builder.getInitializeStrategy();
-		this.positonStrategy = builder.getPositionStrategy();
+		this.positionStrategy = builder.getPositionStrategy();
 		this.resizeStrategy = builder.getResizeStrategy();
 	}
-
-    public void setBuildListener(DoubleArrayTrieBuildListener listener) {
-    	this.debugger = listener;
-    }
 
     public int getDoubleArraySize() {
     	return units.size();
@@ -286,7 +279,7 @@ public class DoubleArrayTrie<VALUE> {
     			maxCode = node.code;
     		}
     	}
-		currentPos = positonStrategy.startPosition(currentPos, maxCode, units, keys, siblings);
+		currentPos = positionStrategy.startPosition(currentPos, maxCode, units, keys, siblings);
     	loop: while(true) {
     		currentPos++;
     		if (units.size() <= currentPos + maxCode) {
@@ -736,66 +729,66 @@ public class DoubleArrayTrie<VALUE> {
     }
 
     public void save(File file) throws IOException {
+        save(file, new ObjectStreamIndexer());
+    }
 
-
-
-    	DataOutputStream out = null;
+    public void save(File file, InfoSegmentIndexer indexer) throws IOException {
+    	Object serializer = null;
 		try {
-			out = new DataOutputStream(new BufferedOutputStream(
-					new FileOutputStream(file)));
-			out.writeInt(units.size());
-			// TODO: 末尾の未使用領域を削除すると後の効率的に良い
-			for(Unit unit:units) {
-				boolean isNotNull = unit != null;
-				out.writeBoolean(isNotNull);
-				if (isNotNull) {
-					out.writeInt(unit.base);
-					out.writeInt(unit.check);
-				}
-			}
-			out.writeInt(codes.size());
-			out.writeInt(codeLength);
-			for(int i=0;i<codes.size();i++) {
-				int code = codes.get(i);
-				if (code > 0) {
-					out.writeInt(i);
-					out.writeInt(code);
-				}
-			}
+            serializer = indexer.openSerializer(file, true);
+
+            ImmutableStreamIndex unitIndex = new ImmutableStreamIndex(serializer, null, indexer);
+            Unit[] unitsArray = units.toArray(new Unit[0]);
+            unitIndex.increaseItemSize(unitsArray.length);
+            unitIndex.saveInfo();
+            unitIndex.saveSegment(0, unitsArray, unitsArray.length);
+
+            ImmutableStreamIndex codesIndex = new ImmutableStreamIndex(serializer, null, indexer);
+            Integer[] codesArray = codes.toArray(new Integer[0]);
+            codesIndex.increaseItemSize(codesArray.length);
+            codesIndex.saveInfo();
+            codesIndex.saveSegment(0, codesArray, codesArray.length);
+
+            indexer.closeSerializer(serializer);
+            serializer = null;
 		} finally {
-			if (out != null)
-				out.close();
+			if (serializer != null) {
+			    indexer.closeSerializer(serializer);
+            }
 		}
     }
 
     public void load(File file) throws IOException {
-    	DataInputStream is = null;
-		try {
-			is = new DataInputStream(new BufferedInputStream(
-					new FileInputStream(file)));
+        load(file, new ObjectStreamIndexer());
+    }
 
-			int len = is.readInt();
-			this.units = new WritableCachedMemoryArrayList<>(Unit.class, len);
-			for (int i=0;i<len;i++) {
-				boolean b = is.readBoolean();
-				if (b) {
-					int base = is.readInt();
-					int check = is.readInt();
-					units.set(i, new Unit(base, check));
-				}
-			}
-			len = is.readInt();
-			this.codes = new WritableCachedMemoryArrayList<>(Integer.class, len);
-			this.codeLength = is.readInt();
-			len = this.codeLength - 1;
-			for (int i=0;i<len;i++) {
-				int idx = is.readInt();
-				int code = is.readInt();
-				this.codes.set(idx, code);
-			}
-		} finally {
-			if (is != null)
-				is.close();
+    public void load(File file, InfoSegmentIndexer indexer) throws IOException {
+        Object deserializer = null;
+		try {
+		    deserializer = indexer.openDeserializer(file, true);
+
+            if (units == null) {
+                units = new WritableCachedMemoryArrayList<>(Unit.class, 0);
+            }
+            if (codes == null) {
+                codes = new WritableCachedMemoryArrayList<>(Integer.class, (Integer) 0,0);
+            }
+            ImmutableStreamIndex unitsIndex = new ImmutableStreamIndex(null, deserializer, indexer);
+            unitsIndex.loadInfo();
+		    units.load(unitsIndex);
+
+            ImmutableStreamIndex codesIndex = new ImmutableStreamIndex(null, deserializer, indexer);
+		    codesIndex.loadInfo();
+		    codes.load(codesIndex);
+
+		    indexer.closeDeserializer(deserializer);
+		    deserializer = null;
+		} catch (ClassNotFoundException e) {
+            throw new RuntimeException("not expected error", e);
+        } finally {
+			if (deserializer != null) {
+                indexer.closeDeserializer(deserializer);
+            }
 		}
     }
 
