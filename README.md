@@ -88,6 +88,16 @@ datrie.getDoubleArraySize() // 約2000万
 datrie.calcFillingRate() // DoubleArray充填率 0.8
 ```
 
+また、標準のDiskArrayListはJDK付属のObjectInputStream,ObjectOutputStreamで実装されています。これらをMessagePackなどで置き換えればより高速化する可能性があります。その場合、[ObjectStreamIndexer](src/main/java/jp/ksgwr/array/index/ObjectStreamIndexer.java)の実装を参考に独自のIndexerを実装してください。このライブラリでは外部ライブラリの依存を発生させないため定義していません。例えば以下のように利用します。
+
+```java
+ExArrayList<String> key = new DiskArrayList<String>(String.class, new InfoSegmentIndex(keyDirectory, "", new YourCustomIndexer()), size);
+
+DoubleArrayInstanceBuilder<Boolean>()
+.setUnitsExArray(new DiskArrayList<String>(...))
+.createInstance();
+```
+
 ## 高速化実装Tips
 
 * UTF-16(unicode)をそのままマッピングすると隙間が大量にできるため、自前でマッピングするか1byte毎扱った方が良い
