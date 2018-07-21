@@ -1,4 +1,4 @@
-# Java Double Array Trie Implementation
+# Java Double Array Trie Implementation [![Build Status](https://travis-ci.org/ksgwr/jadatrie.svg?branch=master)](https://travis-ci.org/ksgwr/jadatrie)
 ## 特徴
 
 ** ※本ライブラリは未完成です。現状では参考資料の実装を利用するのをお勧めします。 **
