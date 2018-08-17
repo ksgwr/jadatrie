@@ -121,19 +121,12 @@ DoubleArrayInstanceBuilder<Boolean>()
 
 ## ToDo
 
-* 初期のサイズの決定方針を検討
-* パフォーマンス調査
-* Wikipediaタイトルのデータで構築できるか調査
-* MessagePackなどで分散させながら保存するオプションを追加
 * BitVectorの活用(TAILなどを入れる)
 * spellerMatchのリファクタリング、他のメソッドのspeller実装の追加
 * id(debug用)でなく、key,valueを返すためのメソッド追加
 * MAMatchの実装
 * javadocなどの記述、テストケースの作成
 * おそらくsortしていないものを入れられた時にバグがある
-* 構築時に配列を分割しながらメモリアウトする仕組みを実装
-  * 入出力はファイルで扱えれば良い(sort済み前提なため基本的には1コマンドの実装)
-  * 常にincrementしているため前半は使わない
 
 ## License
 
